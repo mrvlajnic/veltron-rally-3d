@@ -219,7 +219,7 @@ export class WeatherSystem {
 
     // Rain particles
     this.rain = null;
-    this._initRain();
+    this._buildRain();
 
     // Fog presets per weather
     this.fogPresets = {
