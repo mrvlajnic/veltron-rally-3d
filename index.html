@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rally 3D — Prototype 0.2</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+  { "imports": { "three": "./vendor/three.module.js" } }
+  </script>
+</head>
+<body>
+
+<!-- ============================ IN-RACE HUD ============================ -->
+<div id="hud" class="hidden">
+  <div id="hud-speed">Km/h:0</div>
+  <div id="hud-clock">
+    <span id="hud-time">0.0</span>
+    <span id="hud-penalty"></span>
+  </div>
+  <div id="hud-footer">
+    <span id="hud-stage">GRASSY PLAINS</span>
+    <span id="version">PROTOTYPE 0.2</span>
+    <span class="softkey">ESC GARAGE</span>
+    <span class="softkey">R RESTART</span>
+  </div>
+</div>
+
+<!-- ============================== TITLE ================================ -->
+<div id="screen-title" class="screen">
+  <div class="chrome">
+    <div class="logo">RALLY<span>3D</span></div>
+    <div class="tagline">VELTRON RALLY</div>
+  </div>
+  <div class="panel">
+    <ul class="menu">
+      <li class="selected">CHAMPIONSHIP</li>
+      <li>TIME TRIAL</li>
+      <li class="muted">BLUETOOTH</li>
+    </ul>
+  </div>
+  <div class="bar">
+    <span class="softkey">ENTER SELECT</span>
+    <span class="softkey right">RALLY 3D 2005</span>
+  </div>
+</div>
+
+<!-- ============================== GARAGE =============================== -->
+<div id="screen-garage" class="screen hidden">
+  <div class="chrome">
+    <div class="logo small">SELECT CAR</div>
+  </div>
+  <div id="garage-class">BALANCED</div>
+  <div class="arrows"><span class="arrow">&#9664;</span><span class="arrow">&#9654;</span></div>
+  <div id="garage-stage">STAGE 1  GRASSY PLAINS</div>
+  <div class="stats">
+    <div class="stat"><span class="stat-label">Speed:</span><span class="track"><i id="bar-speed"></i></span></div>
+    <div class="stat"><span class="stat-label">Acc:</span><span class="track"><i id="bar-acc"></i></span></div>
+    <div class="stat"><span class="stat-label">Grip:</span><span class="track"><i id="bar-grip"></i></span></div>
+  </div>
+  <div class="bar">
+    <span id="garage-name">VELTRON V1</span>
+    <span class="softkey right">&#9664; &#9654; CAR &nbsp; &#9650; &#9651; STAGE &nbsp; ENTER SELECT</span>
+  </div>
+</div>
+
+<!-- ============================== RESULTS ============================== -->
+<div id="screen-results" class="screen hidden">
+  <div class="chrome">
+    <div class="logo small">STAGE RESULT</div>
+  </div>
+  <div class="panel result-panel">
+    <div class="result-row"><span>TIME</span><b id="result-time">0.0</b></div>
+    <div class="result-row"><span id="result-penalty" class="penalty-ok">PENALTY NONE</span></div>
+    <div class="result-row"><b id="result-medal" class="medal">NO MEDAL</b></div>
+    <div class="result-note" id="result-note"></div>
+  </div>
+  <div class="bar">
+    <span class="softkey">ENTER CONTINUE</span>
+    <span class="softkey right">RALLY 3D 2005</span>
+  </div>
+</div>
+
+<audio id="menu-music" src="Call It What You Like (VIP Edit).mp3" preload="auto"></audio>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

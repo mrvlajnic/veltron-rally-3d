@@ -1,0 +1,74 @@
+# Rally 3D — Veltron Edition .gitignore
+
+# Dependencies
+node_modules/
+vendor/three.module.js.map
+
+# Build outputs
+dist/
+build/
+*.bundle.js
+
+# Local configuration
+.env
+.env.local
+.env.*.local
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Browser / Testing
+*.log
+*.cache
+coverage/
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+
+# OS generated
+ehthumbs.db
+Desktop.ini
+
+# Large binaries (track with Git LFS if needed)
+*.mp3
+*.wav
+*.ogg
+*.mp4
+*.mov
+*.avi
+*.zip
+*.tar.gz
+*.rar
+
+# IDE / Editor specific
+*.code-workspace
+*.sublime-workspace
+*.sublime-project
+
+# Node (not used in this project, but just in case)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+dist/
+build/
+
+# VS Code specific
+.vscode/settings.json
+.vscode/launch.json
