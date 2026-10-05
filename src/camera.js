@@ -237,12 +237,12 @@ export class WeatherSystem {
       noon:   { top: 0x4a9ad0, horizon: 0xd0e8f8, ground: 0xcce0f0, bands: 7 }
     };
 
-    // Lighting presets
+    // Lighting presets (match _buildLights expected format)
     this.lightPresets = {
-      sunny:  { hemi: [0xdcefff, 0x4a5a2a, 1.15], sun: [0xfff2d0, 1.5, {x:60,y:120,z:40}] },
-      rainy:  { hemi: [0xaabccc, 0x3a4a4a, 0.8],  sun: [0xccccee, 0.6, {x:50,y:100,z:30}] },
-      night:  { hemi: [0x333355, 0x1a1a1a, 0.4],  sun: [0x444466, 0.2, {x:40,y:80,z:20}] },
-      noon:   { hemi: [0xeef5ff, 0x5a6a4a, 1.3],  sun: [0xffffee, 1.8, {x:70,y:140,z:50}] }
+      sunny:  { hemi: { color: 0xdcefff, ground: 0x4a5a2a, intensity: 1.15 }, sun: { color: 0xfff2d0, intensity: 1.5, position: { x: 60, y: 120, z: 40 } } },
+      rainy:  { hemi: { color: 0xaabccc, ground: 0x3a4a4a, intensity: 0.8 },  sun: { color: 0xccccee, intensity: 0.6, position: { x: 50, y: 100, z: 30 } } },
+      night:  { hemi: { color: 0x333355, ground: 0x1a1a1a, intensity: 0.4 },  sun: { color: 0x444466, intensity: 0.2, position: { x: 40, y: 80, z: 20 } } },
+      noon:   { hemi: { color: 0xeef5ff, ground: 0x5a6a4a, intensity: 1.3 },  sun: { color: 0xffffee, intensity: 1.8, position: { x: 70, y: 140, z: 50 } } }
     };
 
     this._buildRain();

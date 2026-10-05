@@ -118,12 +118,23 @@ export class World {
   // Terrain, road and scenery are unlit vertex art. Only the car is lit, with
   // hard flat per-face shading — the 2005 convention of pre-baked landscape
   // plus a shaded vehicle.
-  _buildLights(scene) {
-    const hemi = new THREE.HemisphereLight(0xdcefff, 0x4a5a2a, 1.15);
+  _buildLights(scene, preset) {
+    const env = this.env;
+    const l = preset || {
+      hemi: { color: 0xdcefff, ground: 0x4a5a2a, intensity: 1.15 },
+      sun: { color: 0xfff2d0, intensity: 1.5, position: { x: 60, y: 120, z: 40 } }
+    };
+
+    const hemi = new THREE.HemisphereLight(l.hemi.color, l.hemi.ground, l.hemi.intensity);
     scene.add(hemi);
-    const sun = new THREE.DirectionalLight(0xfff2d0, 1.5);
-    sun.position.set(60, 120, 40);
+
+    const sun = new THREE.DirectionalLight(l.sun.color, l.sun.intensity);
+    sun.position.set(l.sun.position.x, l.sun.position.y, l.sun.position.z);
     scene.add(sun);
+
+    // Store references for later updates
+    this.hemi = hemi;
+    this.sun = sun;
   }
 
   // ----------------------------------------------------------------- sky ---
