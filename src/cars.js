@@ -43,7 +43,7 @@ export const CARS = [
       rideHeight: -0.03      // sits lower, more planted
     }
   },
-  {
+{
     id: 'centurion',
     name: 'VELTRON CENTURION',
     class: 'SPEED',
@@ -55,11 +55,30 @@ export const CARS = [
       drag: 0.0018,
       rollingResist: 0.45,
       maxYawRate: 1.95,
-      gripRoad: 5.2,         // oversteers; has to be driven carefully
+      gripRoad: 5.2,
       bodyColor: 0xe0c020,
       accentColor: 0x1a1a1a,
       wingScale: 1.3,
       rideHeight: 0.02
+    }
+  },
+  {
+    id: 'hatch',
+    name: 'VELTRON HATCH',
+    class: 'HOT HATCH',
+    stats: { speed: 0.65, acc: 0.7, grip: 0.75 },
+    tuning: {
+      maxSpeed: 25.5,
+      accel: 12.5,
+      brake: 22.0,
+      drag: 0.0024,
+      rollingResist: 0.5,
+      maxYawRate: 2.8,
+      gripRoad: 8.5,
+      bodyColor: 0x1a73e8,
+      accentColor: 0xffffff,
+      wingScale: 0.8,
+      rideHeight: -0.02
     }
   }
 ];
