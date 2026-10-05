@@ -167,6 +167,14 @@ canvas { display: block; }
   color: #ffe9a8;
 }
 
+#garage-weather {
+  text-align: center;
+  margin-top: 4px;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: #35d0e8;
+}
+
 .arrows {
   display: flex;
   justify-content: space-between;

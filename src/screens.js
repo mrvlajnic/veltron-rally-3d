@@ -7,6 +7,14 @@ import { formatTime } from './hud.js';
 
 export const STAGE_LIST = Object.keys(STAGES);
 
+export const WEATHER_LIST = ['sunny', 'rainy', 'night', 'noon'];
+export const WEATHER_LABELS = {
+  sunny: 'SUNNY',
+  rainy: 'RAINY',
+  night: 'NIGHT',
+  noon: 'NOON'
+};
+
 export class Screens {
   constructor() {
     this.title = document.getElementById('screen-title');
@@ -16,6 +24,7 @@ export class Screens {
     this.garageName = document.getElementById('garage-name');
     this.garageClass = document.getElementById('garage-class');
     this.garageStage = document.getElementById('garage-stage');
+    this.garageWeather = document.getElementById('garage-weather');
     this.garageBars = {
       speed: document.getElementById('bar-speed'),
       acc: document.getElementById('bar-acc'),
@@ -29,6 +38,7 @@ export class Screens {
 
     this.carIndex = 0;
     this.stageIndex = 0;
+    this.weatherIndex = 0;
   }
 
   show(which) {
@@ -55,6 +65,8 @@ export class Screens {
     this.garageClass.textContent = car.class;
     const stage = STAGES[STAGE_LIST[this.stageIndex]];
     this.garageStage.textContent = 'STAGE ' + (this.stageIndex + 1) + '  ' + stage.name;
+    const weather = WEATHER_LIST[this.weatherIndex];
+    this.garageWeather.textContent = 'WEATHER  ' + WEATHER_LABELS[weather];
     for (const key of ['speed', 'acc', 'grip']) {
       this.garageBars[key].style.width = Math.round(car.stats[key] * 100) + '%';
     }
@@ -76,12 +88,16 @@ export class Screens {
     return before !== this.stageIndex;
   }
 
-  get selectedCar() {
-    return CARS[this.carIndex];
+  /** Advance the weather carousel. Returns true if the selection changed. */
+  cycleWeather(delta) {
+    const before = this.weatherIndex;
+    this.weatherIndex = (this.weatherIndex + delta + WEATHER_LIST.length) % WEATHER_LIST.length;
+    this._renderGarage();
+    return before !== this.weatherIndex;
   }
 
-  get selectedStageId() {
-    return STAGE_LIST[this.stageIndex];
+  get selectedWeather() {
+    return WEATHER_LIST[this.weatherIndex];
   }
 
   /** Push the current car spec to the live 3D preview car. */

@@ -8,9 +8,10 @@ import { Input } from './input.js';
 import { HUD } from './hud.js';
 import { Screens } from './screens.js';
 import { CARS } from './cars.js';
+import { WeatherSystem } from './camera.js';
 
-const MAX_DT = 0.05;      // clamp so a stall cannot teleport the car
-const PROTO_VERSION = 'PROTOTYPE 0.3';
+const MAX_DT = 0.05;
+const PROTO_VERSION = 'PROTOTYPE 0.4';
 
 // ------------------------------------------------------------- soundtrack ---
 // One <audio> element, reused for the whole session. Browsers refuse to play
@@ -83,12 +84,15 @@ function boot() {
   // Wide FOV, as inferred from the original: the road spanned nearly the
   // full frame width at the bottom edge.
   const camera = new THREE.PerspectiveCamera(
-    72, window.innerWidth / window.innerHeight, 0.4, 3000
+    70, window.innerWidth / window.innerHeight, 0.3, 4000
   );
 
   // Sky, fog and lights. The palette is matched to whichever stage is active
   // via setEnvironment() when the player picks a stage.
   const world = new World(ENVIRONMENTS[STAGES[STAGE_LIST[0]].environment]).build(scene);
+
+  // Weather system (rain, fog, sky, lighting per condition)
+  const weather = new WeatherSystem(scene, renderer, world);
 
   // Every stage is built up front and kept in its own group, so switching is
   // a visibility toggle plus a palette swap — no rebuilding, no hitches.
@@ -113,7 +117,7 @@ function boot() {
   preview.group.visible = false;
   scene.add(preview.group);
 
-  const chase = new ChaseCamera(camera);
+  const chase = new ChaseCamera(camera, renderer.domElement);
   const input = new Input();
   const hud = new HUD();
   const screens = new Screens();
@@ -136,6 +140,10 @@ function boot() {
     car.stage = st;
     preview.stage = st;
     placeGarageCar();
+  }
+
+  function selectWeather(id) {
+    weather.setWeather(id);
   }
 
   /** Park the turntable car on the active stage's start verge. */
@@ -192,6 +200,10 @@ function boot() {
     car.group.visible = true;
     preview.group.visible = false;
     chase.snapTo(car);
+    // Apply selected weather
+    weather.setWeather(screens.selectedWeather);
+    // Request pointer lock for mouse steering
+    renderer.domElement.requestPointerLock();
   }
 
   function goResults() {
@@ -220,7 +232,7 @@ function boot() {
   // ------------------------------------------------------------- the loop ---
   const clockObj = new THREE.Clock();
   const debug = { fps: 0, frames: 0, elapsed: 0, restarts: 0, state: 'title' };
-  window.__rally = { car, preview, camera, renderer, scene, stage, stages, activeStageId, world, input, hud, screens, chase, debug, CARS, STAGE_LIST, Music };
+  window.__rally = { car, preview, camera, renderer, scene, stage, stages, activeStageId, world, weather, input, hud, screens, chase, debug, CARS, STAGE_LIST, Music, ENVIRONMENTS };
 
   function frame() {
     requestAnimationFrame(frame);
@@ -248,6 +260,8 @@ function boot() {
         if (menu.right) { if (screens.cycleCar(1)) screens.applyPreview(preview); }
         if (menu.up) { if (screens.cycleStage(-1)) selectStage(screens.selectedStageId); }
         if (menu.down) { if (screens.cycleStage(1)) selectStage(screens.selectedStageId); }
+        if (menu.left && menu.shiftKey) { if (screens.cycleWeather(-1)) selectWeather(screens.selectedWeather); }
+        if (menu.right && menu.shiftKey) { if (screens.cycleWeather(1)) selectWeather(screens.selectedWeather); }
         if (menu.back) goTitle();
         if (menu.confirm) goRace();
         // Slow turntable, like the original's car-select render.
@@ -266,6 +280,17 @@ function boot() {
         }
         if (menu.back) { goGarage(); break; }
 
+        clock += dt;
+        
+        // Mouse steering (add to keyboard input)
+        const mouseSteer = chase.getMouseSteer();
+        if (mouseSteer !== 0) {
+          input.steer = Math.max(-1, Math.min(1, input.steer + mouseSteer));
+        }
+        
+        // Update weather
+        weather.update(dt, car.position);
+        
         clock += dt;
         car.update(dt, input);
         chase.update(car, dt);
