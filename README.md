@@ -107,8 +107,6 @@ Main menu soundtrack: **"Call It What You Like — VIP Remix"** (file: `Call It 
 - Autoplay fallback: first keypress/click triggers playback if blocked
 - Volume: 0.45
 
-> **Third-party content notice**: The music track is third-party content included for development atmosphere. The project does not own redistribution rights to this track. If redistributing the repository publicly, verify rights or replace with licensed/original audio.
-
 ## Running Locally
 
 ### Quick Start (Windows)
@@ -178,7 +176,6 @@ The project uses ES modules and an importmap, so it **must be served over HTTP**
 - Point-to-point stages only (no lap system)
 - Garage turntable shares the stage environment
 - Debug handle `window.__rally` exposed in console
-- Music track is third-party; redistribution rights not confirmed
 
 ## Roadmap
 
@@ -234,7 +231,7 @@ See [THIRD_PARTY.md](THIRD_PARTY.md) for a complete inventory of third-party dep
 
 ## Disclaimer
 
-Rally 3D — Veltron Edition is a **fan-made technical reconstruction / homage**. It is not affiliated with, endorsed by, or associated with Nokia, Synergenix Interactive, the original Rally 3D / Rally Pro Contest developers, or any rights holders. All original code and assets created for this project are provided under the project license. Third-party content (Three.js, music track) retains its own licensing.
+Rally 3D — Veltron Edition is a **fan-made technical reconstruction / homage**. It is not affiliated with, endorsed by, or associated with Nokia, Synergenix Interactive, the original Rally 3D / Rally Pro Contest developers, or any rights holders. All original code and assets created for this project are provided under the project license. Third-party content (Three.js) retains its own licensing.
 
 ## Handoff
 

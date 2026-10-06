@@ -79,6 +79,17 @@ function boot() {
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
+  // Click on canvas to focus and enable pointer lock
+  renderer.domElement.addEventListener('click', () => {
+    renderer.domElement.focus();
+    renderer.domElement.requestPointerLock().catch(() => {});
+  });
+
+  // Also request pointer lock on mousedown for better UX
+  renderer.domElement.addEventListener('mousedown', () => {
+    renderer.domElement.requestPointerLock().catch(() => {});
+  });
+
   // --------------------------------------------------------------- scene ---
   const scene = new THREE.Scene();
   // Wide FOV, as inferred from the original: the road spanned nearly the
@@ -86,6 +97,8 @@ function boot() {
   const camera = new THREE.PerspectiveCamera(
     70, window.innerWidth / window.innerHeight, 0.3, 4000
   );
+  // Camera must be in the scene for its children (speed lines) to render
+  scene.add(camera);
 
   // Sky, fog and lights. The palette is matched to whichever stage is active
   // via setEnvironment() when the player picks a stage.
@@ -201,9 +214,12 @@ function boot() {
     preview.group.visible = false;
     chase.snapTo(car);
     // Apply selected weather
-    weather.setWeather(screens.selectedWeather);
-    // Request pointer lock for mouse steering
-    renderer.domElement.requestPointerLock();
+    try { weather.setWeather(screens.selectedWeather); } catch (e) { /* weather optional */ }
+    // Request pointer lock for mouse steering (may fail silently)
+    try {
+      const p = renderer.domElement.requestPointerLock();
+      if (p && p.catch) p.catch(() => {});
+    } catch (e) { /* pointer lock optional */ }
   }
 
   function goResults() {
@@ -281,17 +297,16 @@ function boot() {
         if (menu.back) { goGarage(); break; }
 
         clock += dt;
-        
+
         // Mouse steering (add to keyboard input)
         const mouseSteer = chase.getMouseSteer();
         if (mouseSteer !== 0) {
           input.steer = Math.max(-1, Math.min(1, input.steer + mouseSteer));
         }
-        
+
         // Update weather
         weather.update(dt, car.position);
-        
-        clock += dt;
+
         car.update(dt, input);
         chase.update(car, dt);
         hud.update(car.forwardSpeed, clock, car.timePenalty);

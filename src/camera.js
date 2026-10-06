@@ -104,8 +104,11 @@ export class ChaseCamera {
     };
     document.addEventListener('pointerlockchange', lockChange);
 
+    // Request pointer lock on canvas click
     canvas.addEventListener('click', () => {
-      if (!this.pointerLocked) canvas.requestPointerLock();
+      if (!this.pointerLocked) {
+        canvas.requestPointerLock().catch(() => {});
+      }
     });
 
     document.addEventListener('mousemove', (e) => {
@@ -299,20 +302,65 @@ export class WeatherSystem {
       this.world.scene.background.setHex(s.ground);
     }
 
-    // Sky dome
+    // Sky dome - only rebuild if sky colors actually changed
     if (this.world.skyDome) {
-      this.world.scene.remove(this.world.skyDome);
-      this.world.skyDome.geometry.dispose();
-      this.world.skyDome.material.map.dispose();
-      this.world.skyDome.material.dispose();
-    }
-    this.world._buildSky(this.world.scene);
-    this.world.skyDome.material.map.colorSpace = THREE.SRGBColorSpace;
+      const currentMap = this.world.skyDome.material.map;
+      if (currentMap) {
+        // Update the texture in place instead of recreating
+        const { top, horizon, ground, bands } = s;
+        const W = 8, H = 128;
+        const canvas = document.createElement('canvas');
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext('2d');
 
-    // Lighting
-    if (this.world.hemi) this.world.scene.remove(this.world.hemi);
-    if (this.world.sun) this.world.scene.remove(this.world.sun);
-    this.world._buildLights(this.world.scene, l);
+        const cTop = new THREE.Color(top);
+        const cHor = new THREE.Color(horizon);
+        const cGround = new THREE.Color(ground);
+
+        const skyRows = Math.floor(H * 0.78);
+        for (let y = 0; y < skyRows; y++) {
+          const t = y / (skyRows - 1);
+          const c = cHor.clone().lerp(cTop, Math.pow(t, 0.75));
+          ctx.fillStyle = `rgb(${(c.r * 255) | 0},${(c.g * 255) | 0},${(c.b * 255) | 0})`;
+          ctx.fillRect(0, y, W, 1);
+        }
+        // Quantise
+        const img = ctx.getImageData(0, 0, W, skyRows);
+        const d = img.data;
+        for (let y = 0; y < skyRows; y++) {
+          const step = Math.min(bands - 1, Math.floor((y / skyRows) * bands));
+          const src = Math.min(skyRows - 1, Math.round((step / bands) * (skyRows - 1)));
+          for (let x = 0; x < W; x++) {
+            const si = (src * W + x) * 4;
+            const di = (y * W + x) * 4;
+            d[di] = d[si]; d[di + 1] = d[si + 1]; d[di + 2] = d[si + 2]; d[di + 3] = 255;
+          }
+        }
+        ctx.putImageData(img, 0, 0);
+
+        const grad = ctx.createLinearGradient(0, skyRows, 0, H);
+        grad.addColorStop(0, `rgb(${(cHor.r * 255) | 0},${(cHor.g * 255) | 0},${(cHor.b * 255) | 0})`);
+        grad.addColorStop(1, `rgb(${(cGround.r * 255) | 0},${(cGround.g * 255) | 0},${(cGround.b * 255) | 0})`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, skyRows, W, H - skyRows);
+
+        currentMap.needsUpdate = true;
+      }
+    } else {
+      this.world._buildSky(this.world.scene);
+    }
+
+    // Lighting - update existing lights instead of recreating
+    if (this.world.hemi) {
+      this.world.hemi.color.setHex(l.hemi.color);
+      this.world.hemi.groundColor.setHex(l.hemi.ground);
+      this.world.hemi.intensity = l.hemi.intensity;
+    }
+    if (this.world.sun) {
+      this.world.sun.color.setHex(l.sun.color);
+      this.world.sun.intensity = l.sun.intensity;
+      this.world.sun.position.set(l.sun.position.x, l.sun.position.y, l.sun.position.z);
+    }
 
     // Rain
     this.rain.visible = this.current === 'rainy';
