@@ -153,6 +153,8 @@ function boot() {
     car.stage = st;
     preview.stage = st;
     placeGarageCar();
+    // Force camera update after stage switch
+    frameGarageCamera();
   }
 
   function selectWeather(id) {

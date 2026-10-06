@@ -88,6 +88,10 @@ export class Screens {
     return before !== this.stageIndex;
   }
 
+  get selectedStageId() {
+    return STAGE_LIST[this.stageIndex];
+  }
+
   /** Advance the weather carousel. Returns true if the selection changed. */
   cycleWeather(delta) {
     const before = this.weatherIndex;
