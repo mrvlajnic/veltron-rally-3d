@@ -111,13 +111,26 @@ Main menu soundtrack: **"Call It What You Like — VIP Remix"** (file: `Call It 
 
 ## Running Locally
 
+### Quick Start (Windows)
+Double-click `start.bat` — it auto-detects Python or Node.js and opens the game.
+
+### Quick Start (Mac/Linux)
 ```bash
-# From the project root
-python -m http.server 8123
-# Then open http://127.0.0.1:8123/index.html
+./start.sh
 ```
 
-Any static file server works (Node `serve`, `npx serve`, VS Code Live Server, etc.). The project uses ES modules and an importmap, so it **must be served over HTTP** — opening `index.html` directly via `file://` will fail due to CORS.
+### Manual
+```bash
+# Python
+python -m http.server 8123
+
+# Node.js (no dependencies)
+node server.js 8123
+```
+
+Then open `http://localhost:8123` in your browser.
+
+The project uses ES modules and an importmap, so it **must be served over HTTP** — opening `index.html` directly via `file://` will fail due to CORS.
 
 ## Project Structure
 
@@ -125,6 +138,9 @@ Any static file server works (Node `serve`, `npx serve`, VS Code Live Server, et
 .
 ├── index.html              # Entry point, importmap, UI screens
 ├── style.css               # Retro UI styling (checkerboard bars, bitmap fonts)
+├── start.bat               # Windows launcher (auto-detects Python/Node)
+├── start.sh                # Mac/Linux launcher
+├── server.js               # Zero-dependency Node.js static server
 ├── Call It What You Like (VIP Edit).mp3  # Menu soundtrack
 ├── vendor/
 │   └── three.module.js     # Three.js r160 (vendored)
@@ -134,11 +150,10 @@ Any static file server works (Node `serve`, `npx serve`, VS Code Live Server, et
     ├── car.js              # Vehicle physics, suspension, rendering
     ├── cars.js             # Vehicle definitions (stats, tuning, livery)
     ├── world.js            # Sky, fog, lights, environment palettes
-    ├── camera.js           # Chase camera with speed-adaptive lerp
+    ├── camera.js           # Chase camera, weather system, speed effects
     ├── input.js            # Keyboard input + menu action queue
     ├── hud.js              # HUD: speed, timer, penalty, stage name
-    ├── screens.js          # Title, garage (car+stage select), results
-    └── cars.js             # Vehicle definitions
+    └── screens.js          # Title, garage (car+stage select), results
 ```
 
 ## Performance
