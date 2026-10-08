@@ -4,9 +4,26 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Unreleased
+
+### Added
+- **Real night**: world darkness pass (unlit terrain/road/scenery scale to 0.13 — light presets alone only reached the car) plus fake headlights: long beam cones landing ~12 m out, road pool, glowing lamps/tails on both cars
+
+### Fixed
+- **Speed lines reworked**: were 60 full-screen spokes spinning at 0.7 opacity — now 36 short peripheral streaks, no rotation, 0.28 ceiling with shimmer, later onset (45% speed), dim blue-grey base so they don't burn through black skies
+- **Headlight beams read as light, not geometry**: gradient fade along the cone (bright at lamp, gone at the tip) and radial fade on the road pool instead of hard additive edges
+
+## Unreleased
+
+### Added
+- **Time trial for real**: title mode select (CHAMPIONSHIP / TIME TRIAL), per-stage+car bests in localStorage with NEW RECORD / BEST SAVED lines, translucent ghost replay of your best (parked beside you at the countdown)
+- **Championship**: stages run in order with running totals and a CHAMP TOTAL screen; quitting back to garage abandons the run
+- **Records module** (`src/best.js`): quota-safe storage wrapper + shortest-arc ghost interpolation, headless-tested
+
 ## Prototype 0.5 — Night Rain (2026-10-08)
 
 ### Added
+- **Works detailing on all cars**: 5-spoke wheels (wheelspin now visible), mudflaps, mirrors, twin exhausts, accent livery stripes, door plates, sunstrip, dark cabin, splitter/diffuser, antenna; darker glass tint
 - **Tunnel vision**: speed-driven vignette overlay (fades in past ~40% speed) joining the FOV stretch and speed lines
 - **Rain puddles**: seeded on-road water decals (shared radial texture, visible only when rainy, also previewed in the garage); striking one above ~29 km/h splatters procedural dirt on the screen (fades over seconds), thumps the camera and plays a synthesized splash
 - **Driving sound**: synthesized engine (RPM per gear, revvable on the start line), skid and wind noise — `src/engine-audio.js`, zero assets, auto-resumes on input

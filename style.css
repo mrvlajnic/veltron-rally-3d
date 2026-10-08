@@ -295,6 +295,12 @@ canvas { display: block; }
 }
 .penalty-bad { color: #ff5544; }
 .penalty-ok { color: #9fd6a0; }
+.result-note.best {
+  color: #ffd54a;
+  font-weight: bold;
+  min-height: 1em;
+}
+.result-note.best:empty { display: none; }
 .medal { letter-spacing: 2px; }
 .medal-gold { color: #ffd54a; }
 .medal-silver { color: #d6dde5; }

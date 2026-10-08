@@ -42,8 +42,9 @@ export class ChaseCamera {
   }
 
   _initSpeedLines() {
-    // Speed lines: radial lines that appear at high speed
-    const count = 60;
+    // Speed lines: faint peripheral streaks at high speed. They live near
+    // the frame edges (wide radius) so the road ahead stays clean.
+    const count = 36;
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(count * 3 * 2);
     const colors = new Float32Array(count * 3 * 2);
@@ -51,8 +52,8 @@ export class ChaseCamera {
 
     for (let i = 0; i < count; i++) {
       const angle = (i / count) * Math.PI * 2;
-      const radius = 0.8 + Math.random() * 0.4;
-      const length = 3 + Math.random() * 4;
+      const radius = 1.5 + Math.random() * 0.9;
+      const length = 2 + Math.random() * 2.5;
 
       const x = Math.cos(angle) * radius;
       const y = Math.sin(angle) * radius;
@@ -67,7 +68,7 @@ export class ChaseCamera {
       positions[i * 6 + 4] = y * (1 + length * 0.3);
       positions[i * 6 + 5] = -length;
 
-      const brightness = 0.6 + Math.random() * 0.4;
+      const brightness = 0.35 + Math.random() * 0.25;
       colors[i * 6] = brightness;
       colors[i * 6 + 1] = brightness;
       colors[i * 6 + 2] = brightness;
@@ -85,8 +86,9 @@ export class ChaseCamera {
 
     const material = new THREE.LineBasicMaterial({
       vertexColors: true,
+      color: 0x8fa0c0,
       transparent: true,
-      opacity: 1,
+      opacity: 0,
       depthWrite: false,
       blending: THREE.AdditiveBlending
     });
@@ -191,13 +193,15 @@ export class ChaseCamera {
     // Apply shake to camera position
     this.camera.position.add(this.shakeOffset);
 
-    // Speed lines
-    if (speedRatio > 0.35) {
+    // Speed lines: low ceiling, gentle shimmer, no rotation (spinning is
+    // what made them read as bicycle spokes). Stretch sells the motion.
+    this._fxTime = (this._fxTime || 0) + dt;
+    if (speedRatio > 0.45) {
       if (!this.speedLines.parent) this.camera.add(this.speedLines);
       this.speedLines.visible = true;
-      const intensity = Math.min(1, (speedRatio - 0.35) / 0.65);
-      this.speedLines.material.opacity = intensity * 0.7;
-      this.speedLines.rotation.z += dt * speedRatio * 8; // Spin faster at high speed
+      const intensity = Math.min(1, (speedRatio - 0.45) / 0.55);
+      const flicker = 0.85 + 0.15 * Math.sin(this._fxTime * 23);
+      this.speedLines.material.opacity = intensity * 0.28 * flicker;
       this.speedLines.scale.z = 1 + intensity * 2;
     } else {
       this.speedLines.visible = false;
@@ -244,7 +248,7 @@ export class WeatherSystem {
     this.lightPresets = {
       sunny:  { hemi: { color: 0xdcefff, ground: 0x4a5a2a, intensity: 1.15 }, sun: { color: 0xfff2d0, intensity: 1.5, position: { x: 60, y: 120, z: 40 } } },
       rainy:  { hemi: { color: 0x9aabb8, ground: 0x33393a, intensity: 0.75 }, sun: { color: 0xbbc0d0, intensity: 0.45, position: { x: 50, y: 100, z: 30 } } },
-      night:  { hemi: { color: 0x333355, ground: 0x1a1a1a, intensity: 0.4 },  sun: { color: 0x444466, intensity: 0.2, position: { x: 40, y: 80, z: 20 } } },
+      night:  { hemi: { color: 0x333355, ground: 0x1a1a1a, intensity: 0.3 },  sun: { color: 0x444466, intensity: 0.15, position: { x: 40, y: 80, z: 20 } } },
       noon:   { hemi: { color: 0xeef5ff, ground: 0x5a6a4a, intensity: 1.3 },  sun: { color: 0xffffee, intensity: 1.8, position: { x: 70, y: 140, z: 50 } } }
     };
   }

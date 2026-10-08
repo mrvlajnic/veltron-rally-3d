@@ -35,10 +35,34 @@ export class Screens {
     this.resultPenalty = document.getElementById('result-penalty');
     this.resultMedal = document.getElementById('result-medal');
     this.resultNote = document.getElementById('result-note');
+    this.resultBest = document.getElementById('result-best');
+
+    // Title mode menu: first two rows selectable, the third (Bluetooth) muted.
+    this.modeItems = Array.from(document.querySelectorAll('#screen-title .menu li'));
+    this.modeIndex = 0;
 
     this.carIndex = 0;
     this.stageIndex = 0;
     this.weatherIndex = 0;
+    this._renderTitle();
+  }
+
+  _renderTitle() {
+    this.modeItems.forEach((li, i) => {
+      li.classList.toggle('selected', i === this.modeIndex);
+    });
+  }
+
+  /** Cycle CHAMPIONSHIP / TIME TRIAL. Returns true if the selection changed. */
+  cycleMode(delta) {
+    const before = this.modeIndex;
+    this.modeIndex = Math.max(0, Math.min(1, this.modeIndex + delta));
+    this._renderTitle();
+    return before !== this.modeIndex;
+  }
+
+  get selectedMode() {
+    return this.modeIndex === 0 ? 'champ' : 'trial';
   }
 
   show(which) {
@@ -114,13 +138,15 @@ export class Screens {
   }
 
   // ------------------------------------------------------------ results ---
-  showResults(raw, penalty, target) {
+  showResults(raw, penalty, target, opts) {
+    const o = opts || {};
     const total = raw + penalty;
     this.resultTime.textContent = formatTime(raw);
     this.resultPenalty.textContent = penalty > 0.05
       ? 'PENALTY +' + formatTime(penalty)
       : 'PENALTY NONE';
     this.resultPenalty.className = penalty > 0.05 ? 'penalty-bad' : 'penalty-ok';
+    this.resultBest.textContent = o.best || '';
 
     // Bronze / silver / gold, as in the original's per-stage medals.
     let medal = 'NO MEDAL';
@@ -130,9 +156,9 @@ export class Screens {
     this.resultMedal.textContent = medal;
     this.resultMedal.className = 'medal medal-' + medal.split(' ')[0].toLowerCase();
 
-    this.resultNote.textContent = total <= target.gold
+    this.resultNote.textContent = o.note || (total <= target.gold
       ? 'STAGE CLEARED'
-      : 'TARGET TIME ' + formatTime(target.bronze);
+      : 'TARGET TIME ' + formatTime(target.bronze));
     this.show('results');
   }
 }

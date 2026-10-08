@@ -36,6 +36,41 @@ const GEAR_TORQUE = [1.0, 0.97, 0.93, 0.89, 0.85];
 // Scratch object for wheel world positions (no per-frame allocation).
 const _ww = { x: 0, z: 0 };
 
+// Shared fade textures for faked light: beam cones fade apex→tip along
+// their height, the road pool fades center→edge. Hard additive edges are
+// what made them read as solid geometry instead of light.
+let _beamFadeTex = null;
+function beamFadeTexture() {
+  if (_beamFadeTex) return _beamFadeTex;
+  const c = document.createElement('canvas');
+  c.width = 1; c.height = 64;
+  const ctx = c.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 0, 64);
+  g.addColorStop(0, '#ffffff');
+  g.addColorStop(1, '#000000');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 1, 64);
+  _beamFadeTex = new THREE.CanvasTexture(c);
+  return _beamFadeTex;
+}
+
+let _poolFadeTex = null;
+function poolFadeTexture() {
+  if (_poolFadeTex) return _poolFadeTex;
+  const S = 64;
+  const c = document.createElement('canvas');
+  c.width = S; c.height = S;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(S / 2, S / 2, 2, S / 2, S / 2, S / 2);
+  g.addColorStop(0, '#ffffff');
+  g.addColorStop(0.7, '#888888');
+  g.addColorStop(1, '#000000');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, S, S);
+  _poolFadeTex = new THREE.CanvasTexture(c);
+  return _poolFadeTex;
+}
+
 export class RallyCar {
   /**
    * @param {object} spec  entry from cars.js
@@ -91,8 +126,9 @@ export class RallyCar {
     const accent = new THREE.MeshLambertMaterial({ color: T.accentColor, flatShading: true });
     const dark = new THREE.MeshLambertMaterial({ color: 0x42464d, flatShading: true });
     const glass = new THREE.MeshLambertMaterial({
-      color: 0xa6cee2, flatShading: true, transparent: true, opacity: 0.62
+      color: 0x22384a, flatShading: true, transparent: true, opacity: 0.78
     });
+    const white = new THREE.MeshLambertMaterial({ color: 0xf2f2f2, flatShading: true });
     const tyre = new THREE.MeshLambertMaterial({ color: 0x191919, flatShading: true });
     const rim = new THREE.MeshLambertMaterial({ color: 0xb8bcc0, flatShading: true });
     const lamp = new THREE.MeshLambertMaterial({ color: 0xfff0b0, flatShading: true });
@@ -125,6 +161,17 @@ export class RallyCar {
     // Roof + scoop.
     add(new THREE.BoxGeometry(1.28, 0.08, 1.55), dark, 0, 1.36, 0.26);
     add(new THREE.BoxGeometry(0.42, 0.14, 0.44), dark, 0, 1.46, -0.42);
+    // Dark interior tub so the tinted glass reads as a cabin, not a void.
+    add(new THREE.BoxGeometry(1.20, 0.42, 1.60), dark, 0, 1.02, 0.26);
+    // Works livery: accent stripes over bonnet, roof and rear deck. They dive
+    // under the bulge and scoop, which reads as intentional layering.
+    add(new THREE.BoxGeometry(0.52, 0.03, 1.05), accent, 0, 0.915, -1.25);
+    add(new THREE.BoxGeometry(0.52, 0.03, 1.55), accent, 0, 1.405, 0.26);
+    add(new THREE.BoxGeometry(0.52, 0.03, 0.50), accent, 0, 0.795, 1.50);
+    // White sunstrip across the top of the windshield + door plates.
+    add(new THREE.BoxGeometry(1.24, 0.14, 0.04), white, 0, 1.32, -0.775, 0.30);
+    add(new THREE.BoxGeometry(0.02, 0.50, 0.70), white, -0.815, 0.62, 0.10);
+    add(new THREE.BoxGeometry(0.02, 0.50, 0.70), white, 0.815, 0.62, 0.10);
     // Rear wing, scaled per car.
     const wing = add(new THREE.BoxGeometry(1.46 * T.wingScale, 0.07, 0.36), dark, 0, 1.32, 1.88);
     this._wing = wing;
@@ -137,6 +184,39 @@ export class RallyCar {
     // Taillights.
     add(new THREE.BoxGeometry(0.34, 0.15, 0.07), tail, -0.46, 0.78, 1.96);
     add(new THREE.BoxGeometry(0.34, 0.15, 0.07), tail, 0.46, 0.78, 1.96);
+    // Night headlight beams + road pool. The world is unlit, so a real
+    // spotlight would only ever reach the car itself — faked with additive
+    // cones instead, same trick as the contact-shadow blob.
+    const beamMat = new THREE.MeshBasicMaterial({
+      color: 0xffedb8, transparent: true, opacity: 0.14,
+      alphaMap: beamFadeTexture(),
+      blending: THREE.AdditiveBlending, depthWrite: false,
+      side: THREE.DoubleSide, fog: false
+    });
+    const beamGeo = new THREE.ConeGeometry(1.5, 12, 12, 1, true);
+    beamGeo.translate(0, -6, 0);   // apex at the lamp, opening forward
+    this._beamL = new THREE.Mesh(beamGeo, beamMat);
+    this._beamL.position.set(-0.50, 0.66, -2.0);
+    this._beamL.rotation.x = Math.PI / 2 - 0.055;   // tip lands on the road ~12 m out
+    this._beamL.visible = false;
+    this._beamR = this._beamL.clone();
+    this._beamR.position.x = 0.50;
+    this.bodyGroup.add(this._beamL);
+    this.bodyGroup.add(this._beamR);
+    const pool = new THREE.Mesh(
+      new THREE.CircleGeometry(1, 20),
+      new THREE.MeshBasicMaterial({
+        color: 0xffedb8, transparent: true, opacity: 0.16,
+        alphaMap: poolFadeTexture(),
+        blending: THREE.AdditiveBlending, depthWrite: false, fog: false
+      })
+    );
+    pool.rotation.x = -Math.PI / 2;
+    pool.position.set(0, 0.07, -8.0);
+    pool.scale.set(2.8, 7.0, 1);
+    pool.visible = false;
+    this.group.add(pool);
+    this._pool = pool;
     // Flared arches — reads as a rally car at low poly count.
     for (const sx of [-1, 1]) {
       for (const sz of [-1, 1]) {
@@ -144,6 +224,17 @@ export class RallyCar {
           sx * 0.80, 0.62, sz * 1.34);
       }
     }
+    // Door mirrors.
+    add(new THREE.BoxGeometry(0.16, 0.09, 0.14), body, -0.86, 1.12, -0.45);
+    add(new THREE.BoxGeometry(0.16, 0.09, 0.14), body, 0.86, 1.12, -0.45);
+    // Roof antenna.
+    add(new THREE.CylinderGeometry(0.015, 0.015, 0.35, 5), dark, 0.45, 1.575, 0.90);
+    // Front splitter + rear diffuser.
+    add(new THREE.BoxGeometry(1.66, 0.08, 0.45), dark, 0, 0.22, -1.95);
+    add(new THREE.BoxGeometry(1.60, 0.10, 0.30), dark, 0, 0.24, 1.98);
+    // Twin exhausts poking past the rear bumper.
+    add(new THREE.CylinderGeometry(0.06, 0.06, 0.30, 8), dark, -0.45, 0.30, 1.98, Math.PI / 2);
+    add(new THREE.CylinderGeometry(0.06, 0.06, 0.30, 8), dark, 0.45, 0.30, 1.98, Math.PI / 2);
 
     // Four wheels: steer pivot -> spin group -> tyre + rim.
     const layout = [
@@ -168,6 +259,21 @@ export class RallyCar {
       rimMesh.rotation.z = Math.PI / 2;
       spinner.add(rimMesh);
 
+      // Five dark spokes on the outboard face: the one part that makes
+      // wheelspin visible (smooth cylinders show no rotation).
+      const outer = Math.sign(p.x);
+      for (let k = 0; k < 5; k++) {
+        const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.60, 0.12), dark);
+        spoke.position.x = outer * 0.17;
+        spoke.rotation.x = (k / 5) * Math.PI * 2;
+        spinner.add(spoke);
+      }
+
+      // Mudflap hung behind each wheel.
+      const flap = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.30, 0.05), dark);
+      flap.position.set(p.x, 0.30, p.z + 0.45);
+      this.bodyGroup.add(flap);
+
       this.bodyGroup.add(pivot);
       this.wheels.push({ pivot, spinner, steerable: p.steer, x: p.x, z: p.z, index: i });
     });
@@ -188,6 +294,8 @@ export class RallyCar {
 
     this._mats.body = body;
     this._mats.accent = accent;
+    this._mats.lamp = lamp;
+    this._mats.tail = tail;
   }
 
   /**
@@ -202,6 +310,15 @@ export class RallyCar {
     this._mats.accent.color.setHex(spec.tuning.accentColor);
     if (this._wing) this._wing.scale.x = spec.tuning.wingScale;
     this.grip = spec.tuning.gripRoad;
+  }
+
+  /** Night mode: headlight beams + glowing lamps. Off = pure day look. */
+  setNightLights(on) {
+    if (this._beamL) this._beamL.visible = on;
+    if (this._beamR) this._beamR.visible = on;
+    if (this._pool) this._pool.visible = on;
+    if (this._mats.lamp) this._mats.lamp.emissive.setHex(on ? 0xffdf8a : 0x000000);
+    if (this._mats.tail) this._mats.tail.emissive.setHex(on ? 0x991111 : 0x000000);
   }
 
   // ------------------------------------------------------------- helpers ---

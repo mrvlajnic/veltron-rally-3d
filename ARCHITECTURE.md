@@ -50,6 +50,7 @@
 | `camera.js` | Chase camera with speed-adaptive lag compensation |
 | `input.js` | Keyboard state, edge-triggered menu actions |
 | `engine-audio.js` | Synthesized RPM engine + skid + wind (WebAudio, no assets) |
+| `best.js` | Best times + ghost tapes per stage/car (localStorage, quota-safe) |
 | `hud.js` | Speed, timer, penalty, stage name display |
 | `screens.js` | Title, garage (car+stage select), results |
 | `world.js` | Sky dome, fog, lights, environment palettes |
@@ -71,7 +72,8 @@ Scene
 │   └── Gantry (checkered start banner + pillars)
 └── Cars (2× RallyCar)
     ├── Body group (lit, flat-shaded Lambert)
-    ├── Wheels (steer pivots + spin groups)
+    ├── Wheels (steer pivots + spin groups, 5-spoke)
+    ├── Night kit (2 beam cones + road pool + lamp/tail emissive, toggled)
     └── Contact shadow (MeshBasicMaterial, transparent circle)
 ```
 
@@ -79,7 +81,7 @@ Scene
 
 | Object | Material | Shading |
 |--------|----------|---------|
-| Terrain, road, scenery | `MeshBasicMaterial` + vertex colors | Unlit (baked look) |
+| Terrain, road, scenery | `MeshBasicMaterial` + vertex colors | Unlit (baked look; night dims via `setDarkness`, lights can't reach it) |
 | Cars (body, glass, trim) | `MeshLambertMaterial`, `flatShading: true` | Per-face flat lighting |
 | Wheels | `MeshLambertMaterial` | Flat shading |
 | Sky dome | `MeshBasicMaterial` + canvas texture | Unlit, no fog |

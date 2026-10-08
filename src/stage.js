@@ -447,6 +447,29 @@ export class Stage {
     if (this.puddles) this.puddles.visible = on;
   }
 
+  /**
+   * Night darkness for an unlit world: vertex art ignores lights, so the sky
+   * and fog presets alone leave bright terrain under a dark sky. Scaling the
+   * base colors fixes that. Idempotent — always recomputed from stored bases,
+   * shared materials visited once. The sky dome keeps its own night texture.
+   */
+  setDarkness(f) {
+    if (!this._darkMats) {
+      this._darkMats = [];
+      const seen = new Set();
+      this.root.traverse((o) => {
+        if (!o.isMesh || o === this.skyDome) return;
+        const m = o.material;
+        if (m && m.isMeshBasicMaterial && !seen.has(m)) {
+          seen.add(m);
+          if (!m.userData.baseColor) m.userData.baseColor = m.color.clone();
+          this._darkMats.push(m);
+        }
+      });
+    }
+    for (const m of this._darkMats) m.color.copy(m.userData.baseColor).multiplyScalar(f);
+  }
+
   setVisible(on) {
     this.root.visible = on;
   }

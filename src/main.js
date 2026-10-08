@@ -5,7 +5,8 @@ import { Stage, STAGES, STAGE_LIST } from './stage.js';
 import { RallyCar } from './car.js';
 import { ChaseCamera } from './camera.js';
 import { Input } from './input.js';
-import { HUD } from './hud.js';
+import { HUD, formatTime } from './hud.js';
+import { BestStore, sampleGhost, REC_STEP } from './best.js';
 import { Screens } from './screens.js';
 import { CARS } from './cars.js';
 import { WeatherSystem } from './camera.js';
@@ -197,6 +198,21 @@ function boot() {
   preview.group.visible = false;
   scene.add(preview.group);
 
+  // Time-trial ghost: a third car, permanently translucent, replaying the
+  // stored best run. Materials are per-instance, so this never leaks into
+  // the live cars.
+  const ghost = new RallyCar(CARS[0], stage);
+  ghost.group.visible = false;
+  ghost.group.traverse((o) => {
+    if (o.isMesh) {
+      const ms = Array.isArray(o.material) ? o.material : [o.material];
+      for (const m of ms) { m.transparent = true; m.opacity = 0.35; m.depthWrite = false; }
+    }
+  });
+  ghost.setNightLights(false);
+  scene.add(ghost.group);
+  const bestStore = new BestStore();
+
   const chase = new ChaseCamera(camera, renderer.domElement);
   const input = new Input();
   const hud = new HUD();
@@ -229,6 +245,11 @@ function boot() {
   const PHY_STEP = 1 / 120; // car physics advances in fixed slices
   let phyAcc = 0;
   let clock = 0;          // raw stage clock
+  let mode = 'trial';     // trial | champ (picked on the title screen)
+  let champ = null;       // { index, totals: [] } while a championship runs
+  let ghostData = null;   // loaded best recording for this stage+car
+  let rec = [];           // points of the run in progress
+  let recLast = -1;
   let state = 'title';    // title | garage | countdown | race | results
   let garageSpin = 0;
 
@@ -262,10 +283,22 @@ function boot() {
     dirtEl.classList.add('hidden');
   }
 
-  /** Rain wets only the driven stage: puddles show on the active road. */
+  /**
+   * Weather look, applied together: puddles only on the driven stage, world
+   * darkness on every stage (unlit vertex art ignores the light presets, so
+   * night must scale material colors), headlights on both cars at night.
+   */
+  const WEATHER_DARKNESS = { sunny: 1, noon: 1, rainy: 0.72, night: 0.13 };
   function applyWetness() {
     const wet = weather.current === 'rainy';
-    for (const key of STAGE_LIST) stages[key].setPuddlesVisible(key === activeStageId && wet);
+    const dark = WEATHER_DARKNESS[weather.current] || 1;
+    for (const key of STAGE_LIST) {
+      stages[key].setPuddlesVisible(key === activeStageId && wet);
+      stages[key].setDarkness(dark);
+    }
+    const night = weather.current === 'night';
+    car.setNightLights(night);
+    preview.setNightLights(night);
   }
 
   /** Show one stage, hide the rest, and match the atmosphere to it. */
@@ -305,6 +338,7 @@ function boot() {
     input.clearDriving();
     engineAudio.stop();
     clearOverlays();
+    ghost.group.visible = false;
     hideCountdown();
     screens.show('title');
     hud.setVisible(false);
@@ -318,6 +352,7 @@ function boot() {
     input.clearDriving();
     engineAudio.stop();
     clearOverlays();
+    ghost.group.visible = false;
     hideCountdown();
     Music.pause();
     screens.openGarage();
@@ -362,10 +397,29 @@ function boot() {
       const p = renderer.domElement.requestPointerLock();
       if (p && p.catch) p.catch(() => {});
     } catch (e) { /* pointer lock optional */ }
+    // Time-trial tape: the ghost replays this stage+car's best, if any.
+    ghost.stage = car.stage;
+    ghost.applySpec(spec);
+    ghost.setNightLights(false);
+    ghostData = bestStore.load(activeStageId, spec.id);
+    rec = [];
+    recLast = -1;
+    placeGhost(0);
     // Stage-start countdown — the clock starts at GO, not here.
     cdT = 3.0;
     cdLabel = '';
     engineAudio.start();
+  }
+
+  /** Park the ghost at recording time t (hides it when there's no tape). */
+  function placeGhost(t) {
+    const pose = sampleGhost(ghostData ? ghostData.ghost : null, t);
+    if (!pose) { ghost.group.visible = false; return; }
+    ghost.position.set(pose.x, pose.y, pose.z);
+    ghost.yaw = pose.yaw;
+    ghost._groundY = pose.y;
+    ghost.syncMesh();
+    ghost.group.visible = true;
   }
 
   /** Push current driving state into the synthesized audio. */
@@ -389,8 +443,31 @@ function boot() {
     input.clearDriving();
     engineAudio.stop();
     clearOverlays();
+    ghost.group.visible = false;
     hideCountdown();
-    screens.showResults(clock, car.timePenalty, TARGETS[activeStageId] || TARGETS.cartway);
+    const total = clock + car.timePenalty;
+    const prev = bestStore.load(activeStageId, car.spec.id);
+    let bestLine = '';
+    if (!prev || total < prev.total) {
+      bestStore.save(activeStageId, car.spec.id, {
+        total, raw: clock, penalty: car.timePenalty,
+        date: Date.now(), ghost: { step: REC_STEP, pts: rec }
+      });
+      bestLine = prev ? 'NEW RECORD!' : 'BEST SAVED';
+    } else {
+      bestLine = 'BEST ' + formatTime(prev.total);
+    }
+    let note;
+    if (mode === 'champ' && champ) {
+      champ.totals[champ.index] = total;
+      if (champ.index >= STAGE_LIST.length - 1) {
+        note = 'CHAMP TOTAL ' + formatTime(champ.totals.reduce((a, b) => a + b, 0));
+      } else {
+        note = 'STAGE ' + (champ.index + 1) + ' OF ' + STAGE_LIST.length;
+      }
+    }
+    screens.showResults(clock, car.timePenalty, TARGETS[activeStageId] || TARGETS.cartway,
+      { best: bestLine, note });
     hud.setVisible(false);
   }
 
@@ -442,7 +519,19 @@ function boot() {
           if (titlePanel) titlePanel.style.transform =
             `translate(${(parX * 8).toFixed(2)}px, ${(parY * 6).toFixed(2)}px)`;
         }
-        if (menu.confirm) goGarage();
+        if (menu.up) screens.cycleMode(-1);
+        if (menu.down) screens.cycleMode(1);
+        if (menu.confirm) {
+          mode = screens.selectedMode;
+          if (mode === 'champ') {
+            champ = { index: 0, totals: [] };
+            screens.stageIndex = 0;
+            selectStage(screens.selectedStageId);
+          } else {
+            champ = null;
+          }
+          goGarage();
+        }
         break;
       }
 
@@ -494,6 +583,8 @@ function boot() {
         if (input.consumeRestart()) {
           car.reset();
           clock = 0;
+          rec = [];
+          recLast = -1;
           chase.snapTo(car);
           debug.restarts++;
         }
@@ -517,6 +608,13 @@ function boot() {
           car.update(PHY_STEP, input);
           phyAcc -= PHY_STEP;
         }
+        // Time-trial tape: record this run, replay the best.
+        if (clock - recLast >= REC_STEP) {
+          rec.push([+car.position.x.toFixed(2), +car.position.y.toFixed(2),
+            +car.position.z.toFixed(2), +car.yaw.toFixed(3)]);
+          recLast = clock;
+        }
+        placeGhost(clock);
         // Feel: rumble on grass, faint tremor at high speed.
         const spd = Math.abs(car.forwardSpeed);
         if (car.offRoad && spd > 4) chase.addShake(dt * 4);
@@ -559,7 +657,17 @@ function boot() {
       }
 
       case 'results':
-        if (menu.confirm || menu.back) goGarage();
+        if (menu.back) { champ = null; goGarage(); break; }
+        if (menu.confirm) {
+          if (mode === 'champ' && champ && champ.index < STAGE_LIST.length - 1) {
+            champ.index++;
+            screens.stageIndex = champ.index;
+            selectStage(screens.selectedStageId);
+          } else {
+            champ = null;
+          }
+          goGarage();
+        }
         break;
     }
 
