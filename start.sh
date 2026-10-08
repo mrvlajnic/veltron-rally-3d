@@ -13,7 +13,21 @@ echo "  Starting local server..."
 echo "============================================"
 echo ""
 
-# Check for Python 3
+# Check for Node.js first: bundled server.js sends Cache-Control: no-cache,
+# so the browser always picks up fresh JS. Python's http.server allows
+# aggressive module caching, which can mix old and new files after an update.
+if command -v node &> /dev/null; then
+    echo "[OK] Node.js found"
+    echo "[OK] Server starting at http://localhost:8123"
+    echo ""
+    echo "Press Ctrl+C to stop the server"
+    echo ""
+    open "http://localhost:8123" 2>/dev/null || xdg-open "http://localhost:8123" 2>/dev/null || true
+    node server.js 8123
+    exit 0
+fi
+
+# Check for Python 3 (fallback: hard-reload the game tab, Ctrl+F5, after updates)
 if command -v python3 &> /dev/null; then
     echo "[OK] Python 3 found"
     echo "[OK] Server starting at http://localhost:8123"
@@ -34,18 +48,6 @@ if command -v python &> /dev/null; then
     echo ""
     open "http://localhost:8123" 2>/dev/null || xdg-open "http://localhost:8123" 2>/dev/null || true
     python -m http.server 8123
-    exit 0
-fi
-
-# Check for Node.js (use bundled server.js - no npm install needed)
-if command -v node &> /dev/null; then
-    echo "[OK] Node.js found"
-    echo "[OK] Server starting at http://localhost:8123"
-    echo ""
-    echo "Press Ctrl+C to stop the server"
-    echo ""
-    open "http://localhost:8123" 2>/dev/null || xdg-open "http://localhost:8123" 2>/dev/null || true
-    node server.js 8123
     exit 0
 fi
 

@@ -56,6 +56,16 @@ This document inventories all third-party dependencies, reference material, and 
 
 ---
 
+## Visual Assets (AI-Generated)
+
+### Title Screen Backdrop
+- **File**: `assets/title-bg.jpg` (184 KB JPEG, converted from PNG)
+- **Usage**: Main menu background; all menu wording rendered in HTML/CSS on top
+- **Origin**: AI-generated key art from a text prompt (no text baked into the image)
+- **Licensing status**: Depends on the generator's terms — verify before public redistribution
+
+---
+
 ## Development Tools (Not Bundled)
 
 | Tool | Purpose |
@@ -75,6 +85,7 @@ This document inventories all third-party dependencies, reference material, and 
 | Three.js r160 | MIT | Yes (vendored) |
 | Research sources | Various (fair use / reference) | No (reference only) |
 | Music track | Unknown / Third-party | Yes (root) |
+| Title backdrop | AI-generated (see above) | Yes (assets/) |
 
 ---
 

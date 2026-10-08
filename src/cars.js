@@ -11,10 +11,10 @@ export const CARS = [
     class: 'BALANCED',
     stats: { speed: 0.55, acc: 0.55, grip: 0.55 },
     tuning: {
-      maxSpeed: 27.5,        // m/s — the original topped out around 100 km/h
-      accel: 11.0,
+      maxSpeed: 34.0,        // m/s ≈ 122 km/h flat out
+      accel: 12.0,
       brake: 20.0,
-      drag: 0.0022,
+      drag: 0.0007,
       rollingResist: 0.55,
       maxYawRate: 2.35,
       gripRoad: 7.4,
@@ -30,10 +30,10 @@ export const CARS = [
     class: 'GRIP',
     stats: { speed: 0.38, acc: 0.45, grip: 0.92 },
     tuning: {
-      maxSpeed: 24.0,
-      accel: 10.2,
+      maxSpeed: 30.0,        // m/s ≈ 108 km/h flat out
+      accel: 11.0,
       brake: 21.0,
-      drag: 0.0026,
+      drag: 0.0009,
       rollingResist: 0.6,
       maxYawRate: 2.55,
       gripRoad: 11.5,        // corners far better, tops out slower
@@ -49,10 +49,10 @@ export const CARS = [
     class: 'SPEED',
     stats: { speed: 0.95, acc: 0.88, grip: 0.32 },
     tuning: {
-      maxSpeed: 31.5,
-      accel: 13.2,
+      maxSpeed: 41.0,        // m/s ≈ 148 km/h flat out
+      accel: 14.5,
       brake: 17.0,
-      drag: 0.0018,
+      drag: 0.0005,
       rollingResist: 0.45,
       maxYawRate: 1.95,
       gripRoad: 5.2,
@@ -68,10 +68,10 @@ export const CARS = [
     class: 'HOT HATCH',
     stats: { speed: 0.65, acc: 0.7, grip: 0.75 },
     tuning: {
-      maxSpeed: 25.5,
-      accel: 12.5,
+      maxSpeed: 33.0,        // m/s ≈ 119 km/h flat out
+      accel: 13.5,
       brake: 22.0,
-      drag: 0.0024,
+      drag: 0.0007,
       rollingResist: 0.5,
       maxYawRate: 2.8,
       gripRoad: 8.5,

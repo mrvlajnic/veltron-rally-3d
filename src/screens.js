@@ -88,6 +88,10 @@ export class Screens {
     return before !== this.stageIndex;
   }
 
+  get selectedCar() {
+    return CARS[this.carIndex];
+  }
+
   get selectedStageId() {
     return STAGE_LIST[this.stageIndex];
   }

@@ -4,6 +4,37 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Prototype 0.5 — Night Rain (2026-10-08)
+
+### Added
+- **Tunnel vision**: speed-driven vignette overlay (fades in past ~40% speed) joining the FOV stretch and speed lines
+- **Rain puddles**: seeded on-road water decals (shared radial texture, visible only when rainy, also previewed in the garage); striking one above ~29 km/h splatters procedural dirt on the screen (fades over seconds), thumps the camera and plays a synthesized splash
+- **Driving sound**: synthesized engine (RPM per gear, revvable on the start line), skid and wind noise — `src/engine-audio.js`, zero assets, auto-resumes on input
+- **Stage-start countdown**: 3-2-1-GO overlay with pop animation and WebAudio beeps (no assets). Stage clock starts at GO; inputs locked while counting down
+- **Rain preview in garage**: rain particles animate around the preview car when rainy is selected
+- **Title screen key art**: AI-generated night-rain backdrop (`assets/title-bg.jpg`, preloaded); menu wording stays in HTML
+- **Title parallax**: mouse drifts the key art against the menu (2.5D depth, smoothed, honors `prefers-reduced-motion`)
+
+### Fixed
+- **Rainy weather was invisible**: rain `Points` were never added to the scene, the sky texture repaint was never assigned to the live texture, and the follow logic double-counted the car position (fixed to local coords + object follow)
+- **Rainy fog now denser**: fog 25/180 → 15/130 with darker colour, plus dimmer sun/sky for gloom; larger drops (0.22) at 0.8 opacity
+
+### Changed
+- **Steering feel**: smoothed steer ramp (full lock builds in ~1/9 s, unwinds faster) instead of instant digital lock; body roll follows smoothed steer
+- **Handbrake turns**: +35% yaw rate while held, for hairpins
+- **Camera feel**: rumble when off-road at speed, faint tremor above ~72 km/h (uses existing shake system, previously never triggered)
+- **Acceleration feel**: 5-speed arcade gearbox (shifts at 30/48/66/84% of top speed, 0.22 s torque cut) with per-gear torque and stronger mid-range curve — stepped pull instead of flat linear climb; top speed unchanged
+- **High-speed feel**: wind noise scales with speed, engine note tracks RPM per gear, skid audio on slides/off-road
+- **Physics determinism**: car now steps at fixed 120 Hz (was variable frame dt) — same corner, same car at any frame rate
+- **Real top speeds**: V1 122, V3 108, Hatch 119, Centurion 148 km/h (were ~80–113); drag retuned so flat-out equilibrium lands at ~94% of nominal
+- **Gravity on slopes**: climbs pull back and descents push with real g (10% grade ≈ 1 m/s²); downhill runs may overspeed up to +15% past nominal top
+- **Medals retimed per stage**: from autopilot clean runs — plains 54/66/81 s, mountain 3:48/4:38/5:42 (were a single impossible 72/88/108 set)
+
+### Fixed
+- **Car sank into the road**: physics sampled `terrainHeight()` (dirt 0.4 m *under* the ribbon) instead of the visible surface. New `surfaceHeight()` datum (ribbon on tarmac, terrain off-road) used by suspension, spawn and garage placement; contact shadow visible again
+- **Wheel samples mirrored**: front/back wheel world positions were Z-flipped, inverting pitch response on grades
+- **Road-edge grip is progressive**: grip/rolling averaged over 4 contact patches instead of binary center sample; plus crest unloading and slip falloff past ~10° slide
+
 ## Prototype 0.3 — Mountain Touge + Soundtrack
 
 ### Added

@@ -155,7 +155,7 @@ export class ChaseCamera {
   update(car, dt) {
     const fwd = car.forward;
     const speed = Math.abs(car.forwardSpeed);
-    const speedRatio = Math.min(1, speed / 35); // 0-1 at ~35 m/s (126 km/h)
+    const speedRatio = Math.min(1, speed / 42); // 0-1 at ~42 m/s (151 km/h)
 
     // --- Target position ---
     this._targetPos.copy(car.position).addScaledVector(fwd, -this.back);
@@ -227,7 +227,7 @@ export class WeatherSystem {
     // Fog presets per weather
     this.fogPresets = {
       sunny:  { color: 0xb8ccd8, near: 45, far: 360 },
-      rainy:  { color: 0x7a8a9a, near: 25, far: 180 },
+      rainy:  { color: 0x5a6a7a, near: 15, far: 130 },
       night:  { color: 0x1a1a2e, near: 20, far: 150 },
       noon:   { color: 0xcce0f0, near: 50, far: 400 }
     };
@@ -243,23 +243,24 @@ export class WeatherSystem {
     // Lighting presets (match _buildLights expected format)
     this.lightPresets = {
       sunny:  { hemi: { color: 0xdcefff, ground: 0x4a5a2a, intensity: 1.15 }, sun: { color: 0xfff2d0, intensity: 1.5, position: { x: 60, y: 120, z: 40 } } },
-      rainy:  { hemi: { color: 0xaabccc, ground: 0x3a4a4a, intensity: 0.8 },  sun: { color: 0xccccee, intensity: 0.6, position: { x: 50, y: 100, z: 30 } } },
+      rainy:  { hemi: { color: 0x9aabb8, ground: 0x33393a, intensity: 0.75 }, sun: { color: 0xbbc0d0, intensity: 0.45, position: { x: 50, y: 100, z: 30 } } },
       night:  { hemi: { color: 0x333355, ground: 0x1a1a1a, intensity: 0.4 },  sun: { color: 0x444466, intensity: 0.2, position: { x: 40, y: 80, z: 20 } } },
       noon:   { hemi: { color: 0xeef5ff, ground: 0x5a6a4a, intensity: 1.3 },  sun: { color: 0xffffee, intensity: 1.8, position: { x: 70, y: 140, z: 50 } } }
     };
-
-    this._buildRain();
   }
 
   _buildRain() {
-    const count = 800;
+    // Rain lives in a box around the car: particle positions are LOCAL
+    // (centred on the origin) and the whole Points object follows the car,
+    // so there is exactly one car-position offset, not two.
+    const count = 1000;
     const positions = new Float32Array(count * 3);
     const velocities = new Float32Array(count * 3);
 
     for (let i = 0; i < count; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 200;
-      positions[i * 3 + 1] = Math.random() * 80 + 10;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 200;
+      positions[i * 3] = (Math.random() - 0.5) * 80;
+      positions[i * 3 + 1] = Math.random() * 50 + 5;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 80;
       velocities[i * 3] = (Math.random() - 0.5) * 2;
       velocities[i * 3 + 1] = -(25 + Math.random() * 15);
       velocities[i * 3 + 2] = (Math.random() - 0.5) * 2;
@@ -271,7 +272,7 @@ export class WeatherSystem {
 
     const mat = new THREE.PointsMaterial({
       color: 0xaaccff,
-      size: 0.15,
+      size: 0.22,
       transparent: true,
       opacity: 0,
       depthWrite: false,
@@ -280,6 +281,8 @@ export class WeatherSystem {
 
     this.rain = new THREE.Points(geo, mat);
     this.rain.visible = false;
+    this.rain.frustumCulled = false;
+    this.scene.add(this.rain);
   }
 
   setWeather(type, instant = false) {
@@ -344,6 +347,9 @@ export class WeatherSystem {
         ctx.fillStyle = grad;
         ctx.fillRect(0, skyRows, W, H - skyRows);
 
+        // The canvas above is new — point the live texture at it, otherwise
+        // the sky never visibly changes.
+        currentMap.image = canvas;
         currentMap.needsUpdate = true;
       }
     } else {
@@ -364,7 +370,7 @@ export class WeatherSystem {
 
     // Rain
     this.rain.visible = this.current === 'rainy';
-    this.rain.material.opacity = this.current === 'rainy' ? 0.6 : 0;
+    this.rain.material.opacity = this.current === 'rainy' ? 0.8 : 0;
   }
 
   update(dt, carPosition) {
@@ -389,11 +395,12 @@ export class WeatherSystem {
         let py = pos.getY(i) + vy * dt;
         let pz = pos.getZ(i) + vz * dt;
 
-        // Reset when hitting ground
+        // Reset when hitting ground — local coords, the Points object
+        // itself carries the car offset (see _buildRain).
         if (py < 0.5) {
-          px = carPosition.x + (Math.random() - 0.5) * 80;
-          py = Math.random() * 80 + 10;
-          pz = carPosition.z + (Math.random() - 0.5) * 80;
+          px = (Math.random() - 0.5) * 80;
+          py = Math.random() * 50 + 5;
+          pz = (Math.random() - 0.5) * 80;
         }
 
         pos.setXYZ(i, px, py, pz);
@@ -401,8 +408,7 @@ export class WeatherSystem {
       pos.needsUpdate = true;
 
       // Follow car horizontally
-      this.rain.position.x = carPosition.x;
-      this.rain.position.z = carPosition.z;
+      this.rain.position.set(carPosition.x, 0, carPosition.z);
     }
   }
 }

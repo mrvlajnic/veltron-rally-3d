@@ -4,7 +4,7 @@
 
 Rally 3D — Veltron Edition is a browser-based retro rally prototype inspired by the 2005 Nokia J2ME game Rally 3D (a re-skin of Synergenix's Rally Pro Contest, 2004). The goal is a faithful technical reconstruction of the original's visual language and arcade rally gameplay, built with modern Three.js/WebGL while preserving the period-authentic aesthetic.
 
-**Current status**: Prototype 0.3 — two stages (Grassy Plains, Mountain Touge), three cars, stage selection, soundtrack, complete menu flow.
+**Current status**: Prototype 0.5 "Night Rain" — two stages (Grassy Plains, Mountain Touge), four cars, rain/puddle weather, countdown starts, synthesized driving audio, title key art, reworked physics (gears, grade, fixed timestep).
 
 ---
 
@@ -339,7 +339,7 @@ Any static server works (Node `serve`, `npx serve`, VS Code Live Server). **Must
 4. **No AI opponents** — single-car time trial only.
 4. **Garage turntable car** placed at fixed offset from start; may clip on steep grades.
 5. **Music autoplay** may fail silently on strict browsers until first interaction (armed fallback exists).
-6. **HUD version** hardcoded in `main.js` (`PROTOTYPE 0.3`).
+6. **HUD version** hardcoded in `main.js` (`PROTOTYPE 0.5`).
 
 ---
 

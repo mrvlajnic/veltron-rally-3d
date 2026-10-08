@@ -9,13 +9,16 @@ export class Input {
     this.restartRequested = false;
 
     // Edge-triggered menu actions, consumed by the screen layer.
+    // `shift` is latched when left/right is pressed while Shift is held
+    // (used for Shift+Left/Right = weather select in the garage).
     this.menu = {
       confirm: false,
       back: false,
       left: false,
       right: false,
       up: false,
-      down: false
+      down: false,
+      shift: false
     };
 
     this._keys = new Set();
@@ -44,8 +47,14 @@ export class Input {
       if (code === 'KeyR') this.restartRequested = true;
       if (code === 'Enter' || code === 'NumpadEnter') this.menu.confirm = true;
       if (code === 'Escape' || code === 'Backspace') this.menu.back = true;
-      if (code === 'ArrowLeft' || code === 'KeyA') this.menu.left = true;
-      if (code === 'ArrowRight' || code === 'KeyD') this.menu.right = true;
+      if (code === 'ArrowLeft' || code === 'KeyA') {
+        this.menu.left = true;
+        if (e.shiftKey) this.menu.shift = true;
+      }
+      if (code === 'ArrowRight' || code === 'KeyD') {
+        this.menu.right = true;
+        if (e.shiftKey) this.menu.shift = true;
+      }
       if (code === 'ArrowUp' || code === 'KeyW') this.menu.up = true;
       if (code === 'ArrowDown' || code === 'KeyS') this.menu.down = true;
       this._keys.add(code);
@@ -76,13 +85,20 @@ export class Input {
 
   /** Read and clear the edge-triggered menu flags. */
   consumeMenu() {
+    // Fallback: Shift held (but e.shiftKey missed due to event ordering)
+    // still counts when left/right fires in the same frame.
+    const shiftHeld = this._keys.has('ShiftLeft') || this._keys.has('ShiftRight');
+    const shift = this.menu.shift || ((this.menu.left || this.menu.right) && shiftHeld);
     const m = {
       confirm: this.menu.confirm,
       back: this.menu.back,
       left: this.menu.left,
       right: this.menu.right,
       up: this.menu.up,
-      down: this.menu.down
+      down: this.menu.down,
+      shift,
+      // Back-compat alias: main.js previously read `menu.shiftKey`.
+      shiftKey: shift
     };
     this.menu.confirm = false;
     this.menu.back = false;
@@ -90,6 +106,7 @@ export class Input {
     this.menu.right = false;
     this.menu.up = false;
     this.menu.down = false;
+    this.menu.shift = false;
     return m;
   }
 

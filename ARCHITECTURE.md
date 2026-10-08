@@ -13,7 +13,7 @@
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                        main.js                               │
-│  State Machine: title → garage → race → results             │
+│  State Machine: title → garage → countdown → race → results │
 │  ┌─────────────────────────────────────────────────────────┐ │
 │  │  Update Loop (requestAnimationFrame)                   │ │
 │  │  • dt = min(clock.getDelta(), MAX_DT)                  │ │
@@ -49,6 +49,7 @@
 | `world.js` | Sky dome, fog, lights, environment palettes |
 | `camera.js` | Chase camera with speed-adaptive lag compensation |
 | `input.js` | Keyboard state, edge-triggered menu actions |
+| `engine-audio.js` | Synthesized RPM engine + skid + wind (WebAudio, no assets) |
 | `hud.js` | Speed, timer, penalty, stage name display |
 | `screens.js` | Title, garage (car+stage select), results |
 | `world.js` | Sky dome, fog, lights, environment palettes |
@@ -167,6 +168,7 @@ terrainHeight(x, z) {
 | Broadleaf trees | 130 | 260 | IcosahedronGeometry(1.9, 0) |
 | Conifers | 90 | 160 | 3 stacked cones (6 segments) |
 | Guardrail posts+rails | ~1/2 samples on corners | Same | Box + Box (merged) |
+| Puddles (rain only) | 17 | 26 | Circle, shared radial texture |
 | Utility poles | 1/14 samples | Same | Cylinder + Box (merged) |
 | Chevron signs | ~1/2 corners | Same | Box + Cylinder (merged) |
 | Rocks | 40 | 90 | IcosahedronGeometry(0.7, 0) |
@@ -196,19 +198,23 @@ timePenalty: number    // seconds accrued off-road
 
 ### Longitudinal
 ```
-throttle:  accel * (1 - (v/maxSpeed)^1.6)
+gears:     5-speed, upshift at 30/48/66/84% of maxSpeed (0.22 s torque cut)
+torque:    gearMult[gear] * (shiftTimer>0 ? 0.25 : 1)   // stepped pull
+throttle:  accel * torque * (1 - (v/maxSpeed)^2.2)
 brake:     -brake (v > 0.5)  else  -accel * 0.45 (reverse)
 handbrake: -sign(v) * brake * 0.7
 drag:      -v * |v| * drag
-rolling:   -sign(v) * rollingResist (surface-dependent)
-clamp:     [maxReverse, maxSpeed(surface)]
+rolling:   -sign(v) * rollingResist (averaged over 4 wheels)
+grade:     -9.81 * grade * dt (real gravity; 10% climb ≈ 1 m/s^2)
+clamp:     [maxReverse, maxSpeed * (1 + min(0.15, max(0, -grade*1.5)))] (downhill overspeed)
 ```
 
 ### Lateral
 ```
-steerAngle = steer / (1 + |v| * 0.16)
-maxYawRate = maxYawRate / (1 + |v| * yawSpeedFalloff)
-yaw -= steer * maxYawRate * dir * dt * min(1, |v|/1.2)
+steerSm += (steer - steerSm) * (1 - exp(-rate * dt))  // rate 9 in, 13 out
+steerAngle = steerSm / (1 + |v| * 0.16)
+maxYawRate = maxYawRate * (handbrake ? 1.35 : 1) / (1 + |v| * yawSpeedFalloff)
+yaw -= steerSm * maxYawRate * dir * dt * min(1, |v|/1.2)
 lateralSpeed *= exp(-grip * dt)
 ```
 
@@ -220,6 +226,14 @@ lateralSpeed *= exp(-grip * dt)
 | grass | 3.4 | 1.9 (grip), 1.9 (rolling) |
 
 Handbrake: `grip = 1.2`
+
+Grip modifiers: per-wheel surface averaging (straddling reads partial grip),
+crest unloading (`1 + curve*2`, clamped 0.78–1.1), slip falloff
+(`1 - 0.35*smoothstep(slideDeg, 8, 26)`).
+
+**Ground datum invariant**: car physics uses `surfaceHeight()` — the ribbon
+(`y + 0.02`) on tarmac, raw `terrainHeight()` off-road. `terrainHeight()` on
+road/verge is the dirt tucked 0.4 m *under* the ribbon (mesh use only).
 
 ### Suspension (visual only)
 - 4 wheel queries per frame
@@ -254,6 +268,12 @@ lookAt.lerp(smoothedLook, 1 - exp(-lookLerp * dt))
 | lookLerp | 11.0 |
 
 Speed-adaptive rate prevents the camera from lagging excessively at high speed.
+
+Shake triggers (main.js race loop): off-road above 4 m/s (`addShake(dt*4)`),
+faint tremor above 20 m/s scaled to top speed, puddle strikes (+0.3).
+
+Speed-feel stack: FOV stretch + speed lines (camera) + DOM vignette overlay
+(`#speed-vignette`, opacity ramps past 25% speed ratio).
 
 ## Vehicle Definitions (`cars.js`)
 
@@ -292,6 +312,9 @@ Three vehicles share the same mesh topology; `applySpec()` swaps materials, wing
 ## Audio System
 
 - Single `<audio id="menu-music">` element (looped, volume 0.45)
+- Driving sound is synthesized (`EngineAudio`): RPM-tracking engine (saw + sub
+  square through lowpass), bandpassed-noise skid, speed-scaled wind. Starts on
+  race entry, stops on garage/title/results; keydown/click resume for autoplay
 - `Music.request()`: tries `play()`, on rejection arms one-shot keydown/click listener
 - `Music.pause()` called on leaving title screen
 - Single element reused — no duplicate instances
@@ -326,6 +349,7 @@ User Input → Input._onKey() → Input._keys Set → Input._refresh()
 - **Fog + frustum culling** limits visible triangles
 - **Sky dome** rendered once, no fog, no depth write
 - **MAX_DT = 0.05** prevents physics explosion on tab-switch
+- **Fixed-step car physics** (120 Hz accumulator): identical handling at any frame rate
 - **12 m grid cell** for mountain stage (finer facets, reasonable vert count)
 
 ## File Structure

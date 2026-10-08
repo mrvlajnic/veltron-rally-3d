@@ -72,6 +72,48 @@ canvas { display: block; }
 .softkey { color: #cfe0f0; }
 .softkey.right { margin-left: auto; }
 
+/* ============================ COUNTDOWN ============================ */
+#countdown {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 10;
+  font-size: 110px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 6px;
+  color: #ffd54a;
+  text-shadow: 4px 4px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
+}
+#countdown.pop { animation: cd-pop 0.45s ease-out; }
+@keyframes cd-pop {
+  from { transform: scale(1.5); opacity: 0.4; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* ================== SPEED VIGNETTE + DIRT ================== */
+/* Tunnel vision: darkens the frame edges with speed (opacity driven per
+   frame). Dirt: procedurally generated splatter, faded out over seconds. */
+#speed-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(ellipse at center,
+    transparent 50%, rgba(2, 4, 12, 0.62) 100%);
+}
+#dirt {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background-size: cover;
+  background-position: center;
+}
+
 /* ============================== SCREENS =============================== */
 .screen {
   position: fixed;
@@ -147,6 +189,32 @@ canvas { display: block; }
 }
 .menu li.selected { color: #ffe06a; }
 .menu li.muted { color: #6d8299; }
+
+/* ------------------------------ title ------------------------------- */
+/* Photographic key art on its own oversized layer so JS can drift it against
+   the menu for a 2.5D parallax feel. All wording stays in HTML so it renders
+   crisp and never inherits generator text artifacts. */
+#screen-title {
+  overflow: hidden;
+  background: #061424;
+}
+#title-bg {
+  position: absolute;
+  left: -3.5%;
+  top: -3.5%;
+  width: 107%;
+  height: 107%;
+  object-fit: cover;
+  will-change: transform;
+  pointer-events: none;
+}
+/* Keep header, menu and footer above the art layer. */
+#screen-title > *:not(#title-bg) { position: relative; }
+#screen-title .panel {
+  margin: 14vh auto auto;   /* menu sits upper-center, car stays visible below */
+  background: rgba(10, 26, 48, 0.78);
+  will-change: transform;
+}
 
 /* ------------------------------ garage ------------------------------ */
 #screen-garage { align-items: stretch; }

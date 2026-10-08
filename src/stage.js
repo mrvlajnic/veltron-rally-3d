@@ -24,6 +24,7 @@ const PROFILE = [
 ];
 
 export const ROAD_HALF = 4.6;
+export const ROAD_LIFT = 0.02; // ribbon mesh lift above the centerline height
 export const SHOULDER = 1.1;   // grass shoulder beyond the road edge
 const SAMPLE_SPACING = 5;      // centerline resolution (m)
 const TERRAIN_CELL = 16;       // terrain facet size — deliberately chunky
@@ -192,6 +193,31 @@ export class Stage {
     this.root = new THREE.Group();
     this._buildCenterline();
     this._buildLookup();
+    this._layoutPuddles();
+  }
+
+  // ---------------------------------------------------------- puddles -----
+  // Standing water for rainy weather. Layout is pure data (no DOM), derived
+  // from the centerline with its own seeded rng so existing scenery layouts
+  // don't shift. Meshes are built in _buildPuddles and hidden unless it rains.
+  _layoutPuddles() {
+    const count = Math.max(8, Math.min(26, Math.round(this.length / 90)));
+    const rng = mulberry32((this.def.seed ^ 0x9E3779B9) >>> 0);
+    this.puddleSpots = [];
+    for (let i = 0; i < count; i++) {
+      const si = Math.floor((i + 0.5) / count * (this.samples.length - 1));
+      const p = this.samples[si];
+      const lat = (rng() * 2 - 1) * 3.2;
+      const r = 1.2 + rng() * 1.4;
+      this.puddleSpots.push({
+        x: p.x + p.rx * lat,
+        z: p.z + p.rz * lat,
+        y: p.y + 0.045,   // just above the ribbon (surface + 0.02)
+        r: r * 1.1,        // hit radius slightly generous
+        seed: rng(),
+        _hit: -99          // stage-clock of last strike (splash cooldown)
+      });
+    }
   }
 
   // ------------------------------------------------------- centerline ----
@@ -371,6 +397,18 @@ export class Stage {
     return h;
   }
 
+  /**
+   * Visible driving surface: the road ribbon itself on tarmac (centerline
+   * height + ribbon lift), raw terrain everywhere else. Car physics, spawn
+   * and garage placement must use this — NOT terrainHeight, which is the
+   * dirt tucked UNDER the ribbon (0.4 m lower on road/verge).
+   */
+  surfaceHeight(x, z, q) {
+    const info = q || this.query(x, z);
+    if (info.absLat <= ROAD_HALF) return info.y + ROAD_LIFT;
+    return this.terrainHeight(x, z, info);
+  }
+
   // ------------------------------------------------------------ meshes ----
   build(scene) {
     scene.add(this.root);
@@ -378,8 +416,35 @@ export class Stage {
     this._buildTerrain(scene);
     this._buildScenery(scene);
     this._buildRoadside(scene);
+    this._buildPuddles(scene);
     this._buildGantry(scene);
     this._buildHorizonMountains(scene);
+  }
+
+  // Flat water decals on the ribbon: one shared radial texture (pale
+  // sky-reflecting center fading out), one shared material, individual
+  // ellipse scales. depthWrite off so overlapping decals never z-fight.
+  _buildPuddles(scene) {
+    const group = new THREE.Group();
+    group.visible = false;
+    const geo = new THREE.CircleGeometry(1, 20);
+    const mat = new THREE.MeshBasicMaterial({
+      map: makePuddleTexture(), transparent: true, depthWrite: false, fog: true
+    });
+    for (const spot of this.puddleSpots) {
+      const m = new THREE.Mesh(geo, mat);
+      m.rotation.x = -Math.PI / 2;
+      m.rotation.z = spot.seed * Math.PI * 2;
+      m.position.set(spot.x, spot.y, spot.z);
+      m.scale.set(spot.r * (0.8 + spot.seed * 0.5), spot.r, 1);
+      group.add(m);
+    }
+    this.root.add(group);
+    this.puddles = group;
+  }
+
+  setPuddlesVisible(on) {
+    if (this.puddles) this.puddles.visible = on;
   }
 
   setVisible(on) {
@@ -501,7 +566,7 @@ export class Stage {
       fog: true
     }));
     // Nudge up a hair so it always wins the depth test against terrain.
-    mesh.position.y = 0.02;
+    mesh.position.y = ROAD_LIFT;
     this.root.add(mesh);
     this.roadMesh = mesh;
   }
@@ -888,6 +953,27 @@ export class Stage {
     this.root.add(group);
     this.gantry = group;
   }
+}
+
+// Shared puddle texture, built once: pale reflective center dissolving to
+// transparent so the decal melts into the dirt without a hard edge.
+let _puddleTex = null;
+function makePuddleTexture() {
+  if (_puddleTex) return _puddleTex;
+  const S = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = S; canvas.height = S;
+  const ctx = canvas.getContext('2d');
+  const g = ctx.createRadialGradient(S / 2, S / 2, 4, S / 2, S / 2, S / 2);
+  g.addColorStop(0, 'rgba(165,195,225,0.9)');
+  g.addColorStop(0.55, 'rgba(70,95,130,0.65)');
+  g.addColorStop(1, 'rgba(35,50,75,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, S, S);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  _puddleTex = tex;
+  return tex;
 }
 
 // Minimal geometry merge — avoids pulling in the addons/BufferGeometryUtils.

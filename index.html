@@ -3,14 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rally 3D — Prototype 0.4</title>
+  <title>Rally 3D — Prototype 0.5 — Night Rain</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="style.css">
+  <link rel="preload" as="image" href="assets/title-bg.jpg">
   <script type="importmap">
   { "imports": { "three": "./vendor/three.module.js" } }
   </script>
 </head>
 <body>
+
+<!-- Speed vignette + puddle dirt: below the HUD so readouts stay crisp. -->
+<div id="speed-vignette"></div>
+<div id="dirt" class="hidden"></div>
 
 <!-- ============================ IN-RACE HUD ============================ -->
 <div id="hud" class="hidden">
@@ -21,14 +26,18 @@
   </div>
   <div id="hud-footer">
     <span id="hud-stage">GRASSY PLAINS</span>
-    <span id="version">PROTOTYPE 0.4</span>
+    <span id="version">PROTOTYPE 0.5</span>
     <span class="softkey">ESC GARAGE</span>
     <span class="softkey">R RESTART</span>
   </div>
 </div>
 
+<!-- ============================ COUNTDOWN ============================ -->
+<div id="countdown" class="hidden">3</div>
+
 <!-- ============================== TITLE ================================ -->
 <div id="screen-title" class="screen">
+  <img id="title-bg" src="assets/title-bg.jpg" alt="">
   <div class="chrome">
     <div class="logo">RALLY<span>3D</span></div>
     <div class="tagline">VELTRON RALLY</div>

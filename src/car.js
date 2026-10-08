@@ -28,6 +28,14 @@ export const BASE = {
   suspensionDamping: 6.5
 };
 
+// Arcade gearbox: upshift points as fractions of top speed. Gears only shape
+// the torque curve and the engine note — top speed is unchanged.
+const GEAR_UP = [0.30, 0.48, 0.66, 0.84];
+const GEAR_TORQUE = [1.0, 0.97, 0.93, 0.89, 0.85];
+
+// Scratch object for wheel world positions (no per-frame allocation).
+const _ww = { x: 0, z: 0 };
+
 export class RallyCar {
   /**
    * @param {object} spec  entry from cars.js
@@ -48,6 +56,11 @@ export class RallyCar {
     this.stageProgress = 0;
     this.timePenalty = 0;      // seconds lost off-road, shown in red
     this.wheelSpin = 0;
+    this._steerSm = 0;         // smoothed steer: full lock takes ~1/9 s to build
+    this.gear = 1;             // 1..5 forward, 0 = reverse
+    this.shiftTimer = 0;       // torque-cut timer after an upshift
+    this.rpm = 0.18;           // 0..1, drives the engine audio
+    this.slideVis = 0;         // smoothed visual slide angle
     this.steerAngle = 0;
     this.pitch = 0;
     this.roll = 0;
@@ -216,6 +229,11 @@ export class RallyCar {
     this.stageProgress = 0;
     this.timePenalty = 0;
     this.wheelSpin = 0;
+    this._steerSm = 0;
+    this.gear = 1;
+    this.shiftTimer = 0;
+    this.rpm = 0.18;
+    this.slideVis = 0;
     this.steerAngle = 0;
     this.pitch = 0;
     this.roll = 0;
@@ -223,7 +241,7 @@ export class RallyCar {
     this.surface = SURFACE.ROAD;
     this.grip = this.tuning.gripRoad;
     this.finished = false;
-    this._groundY = s.startPos.y;
+    this._groundY = s.surfaceHeight(s.startPos.x, s.startPos.z);
     for (let i = 0; i < 4; i++) { this._wheelY[i] = 0; this._wheelVy[i] = 0; }
     this.syncMesh();
   }
@@ -233,30 +251,57 @@ export class RallyCar {
     const T = this.tuning;
     const B = BASE;
 
-    // --- Surface --------------------------------------------------------
+    // --- Surface (averaged over the four contact patches) ----------------
+    // Straddling the road edge now reads partial grip instead of the
+    // binary center sample, so running wide onto the verge is progressive.
+    let gripSum = 0, rollSum = 0;
+    for (let i = 0; i < 4; i++) {
+      const wp = this._wheelWorld(i, _ww);
+      const wq = this.stage.query(wp.x, wp.z);
+      const wVerge = wq.surface === SURFACE.VERGE;
+      const wOff = wq.surface !== SURFACE.ROAD;
+      gripSum += wOff ? (wVerge ? B.gripVerge : B.gripGrass) : T.gripRoad;
+      rollSum += wOff
+        ? (wVerge ? B.vergeRollingResist : B.grassRollingResist)
+        : T.rollingResist;
+    }
+    const baseGrip = gripSum / 4;
+    const rolling = rollSum / 4;
+
     const q = this.stage.query(this.position.x, this.position.z);
     this.surface = q.surface;
     this.offRoad = q.surface !== SURFACE.ROAD;
-
-    const onVerge = q.surface === SURFACE.VERGE;
-    this.grip = input.handbrake
-      ? B.gripHandbrake
-      : (this.offRoad ? (onVerge ? B.gripVerge : B.gripGrass) : T.gripRoad);
-
-    const rolling = this.offRoad
-      ? (onVerge ? B.vergeRollingResist : B.grassRollingResist)
-      : T.rollingResist;
 
     // Leaving the road accrues a time penalty — the defining rule of the
     // original. Grass stays drivable, so cutting a corner is a real trade.
     if (this.offRoad) this.timePenalty += B.offRoadPenaltyPerSec * dt;
 
+    // --- Grade + crest: climbs pull back, descents push, brows unload ----
+    const fwdQ = this.forward;
+    const yAhead = this.stage.query(
+      this.position.x + fwdQ.x * 6, this.position.z + fwdQ.z * 6).y;
+    const yBehind = this.stage.query(
+      this.position.x - fwdQ.x * 6, this.position.z - fwdQ.z * 6).y;
+    const grade = (yAhead - yBehind) / 12;
+    const curve = (yAhead - 2 * q.y + yBehind) / 6;
+    const loadScale = THREE.MathUtils.clamp(1 + curve * 2.0, 0.78, 1.1);
+
+    // --- Slip-lite: past ~10 degrees of slide the tyres give up gracefully
+    const slideAngle = Math.atan2(
+      Math.abs(this.lateralSpeed), Math.abs(this.forwardSpeed) + 3);
+    const slideDeg = slideAngle * 180 / Math.PI;
+    const slideScale = 1 - 0.35 * THREE.MathUtils.smoothstep(slideDeg, 8, 26);
+
+    this.grip = (input.handbrake ? B.gripHandbrake : baseGrip)
+      * loadScale * slideScale;
+
     // --- Longitudinal ----------------------------------------------------
     const prevSpeed = this.forwardSpeed;
+    this._updateGears(dt, input);
 
     if (input.throttle > 0) {
       const t = THREE.MathUtils.clamp(this.forwardSpeed / T.maxSpeed, 0, 1);
-      this.forwardSpeed += T.accel * (1 - Math.pow(t, 1.6)) * dt;
+      this.forwardSpeed += T.accel * this._torqueMult() * (1 - Math.pow(t, 2.2)) * dt;
     }
     if (input.brake > 0) {
       if (this.forwardSpeed > 0.4) this.forwardSpeed -= T.brake * dt;
@@ -268,21 +313,35 @@ export class RallyCar {
 
     this.forwardSpeed -= Math.sign(this.forwardSpeed) * rolling * dt;
     this.forwardSpeed -= this.forwardSpeed * Math.abs(this.forwardSpeed) * T.drag * dt;
+    // Gravity along the slope: real g, so a 10% climb costs ~1 m/s^2.
+    this.forwardSpeed -= 9.81 * grade * dt;
 
-    this.forwardSpeed = THREE.MathUtils.clamp(this.forwardSpeed, B.maxReverse, T.maxSpeed);
+    // Downhill runs may overspeed slightly past nominal top speed.
+    const vMaxEff = T.maxSpeed * (1 + Math.min(0.15, Math.max(0, -grade * 1.5)));
+    this.forwardSpeed = THREE.MathUtils.clamp(this.forwardSpeed, B.maxReverse, vMaxEff);
     if (Math.abs(this.forwardSpeed) < 0.02 && !input.throttle && !input.brake) {
       this.forwardSpeed = 0;
     }
 
-    // --- Steering: digital-feel, and less sensitive as speed rises ------
-    const speedAbs = Math.abs(this.forwardSpeed);
-    this.steerAngle = input.steer / (1 + speedAbs * 0.16);
+    // --- Steering: ramped (not instant) and less sensitive as speed rises.
+    // Full lock takes a fraction of a second to build, so flicking the keys
+    // upsets the car less but precise lines need anticipation. Releasing the
+    // keys unwinds slightly faster than turning in.
+    const steerRate = input.steer !== 0 ? 9 : 13;
+    this._steerSm += (input.steer - this._steerSm) * (1 - Math.exp(-steerRate * dt));
+    if (Math.abs(this._steerSm) < 0.001 && input.steer === 0) this._steerSm = 0;
+    const steer = this._steerSm;
 
-    const maxYawRate = T.maxYawRate / (1 + speedAbs * B.yawSpeedFalloff);
+    const speedAbs = Math.abs(this.forwardSpeed);
+    this.steerAngle = steer / (1 + speedAbs * 0.16);
+
+    // Handbrake rotates the car harder — the way to swing through hairpins.
+    const yawBoost = input.handbrake ? 1.35 : 1;
+    const maxYawRate = T.maxYawRate * yawBoost / (1 + speedAbs * B.yawSpeedFalloff);
     const dir = this.forwardSpeed < 0 ? -1 : 1;
     // No steering authority at a standstill — matches the original's
     // keypad-stepped handling rather than letting the car pivot on the spot.
-    this.yaw -= input.steer * maxYawRate * dir * dt * Math.min(1, speedAbs / 2.2);
+    this.yaw -= steer * maxYawRate * dir * dt * Math.min(1, speedAbs / 2.2);
 
     // --- Velocity from forward + lateral --------------------------------
     const fwd = this.forward;
@@ -310,28 +369,45 @@ export class RallyCar {
     const speedNorm = THREE.MathUtils.clamp(speedAbs / T.maxSpeed, 0, 1);
     const accel = (this.forwardSpeed - prevSpeed) / Math.max(dt, 1e-5);
     this.roll = THREE.MathUtils.lerp(
-      this.roll, -input.steer * 0.075 * speedNorm, 1 - Math.exp(-8 * dt));
+      this.roll, -this._steerSm * 0.075 * speedNorm, 1 - Math.exp(-8 * dt));
     this.pitch = THREE.MathUtils.lerp(
       this.pitch, THREE.MathUtils.clamp(-accel * 0.005, -0.045, 0.045), 1 - Math.exp(-6 * dt));
 
+    // Visual drift posture: nose tucks into the slide.
+    const slideTarget = THREE.MathUtils.clamp(this.lateralSpeed / 8, -0.5, 0.5);
+    this.slideVis += (slideTarget - this.slideVis) * (1 - Math.exp(-6 * dt));
+
     this.syncMesh();
+  }
+
+  /**
+   * Wheel contact point in world space. Local +X is right, local -Z is
+   * forward; three.js Y-rotation maps (lx,lz) to
+   * (lx*cos + lz*sin, -lx*sin + lz*cos).
+   */
+  _wheelWorld(i, out) {
+    const w = this.wheels[i];
+    const cos = Math.cos(this.yaw), sin = Math.sin(this.yaw);
+    out.x = this.position.x + w.x * cos + w.z * sin;
+    out.z = this.position.z - w.x * sin + w.z * cos;
+    return out;
   }
 
   // -------------------------------------------------------- terrain/susp ---
   // Body height follows the average of the four contact points; each wheel
   // gets its own spring-damped offset, which is what sells bumps off-road.
+  // Heights come from surfaceHeight (the VISIBLE surface), not terrainHeight
+  // (the dirt tucked under the road ribbon).
   _followTerrain(dt) {
     const s = this.stage;
-    const cos = Math.cos(this.yaw), sin = Math.sin(this.yaw);
 
     let sum = 0;
     for (let i = 0; i < 4; i++) {
       const w = this.wheels[i];
-      // Wheel offset rotated into world space.
-      const wx = this.position.x + w.x * cos + w.z * sin;
-      const wz = this.position.z + w.x * sin - w.z * cos;
+      const wp = this._wheelWorld(i, _ww);
+      const wx = wp.x, wz = wp.z;
       const q = s.query(wx, wz);
-      const ground = s.terrainHeight(wx, wz, q);
+      const ground = s.surfaceHeight(wx, wz, q);
       const target = ground - this._groundY;   // relative to body height
       // Critically-ish damped spring.
       const a = BASE.suspensionStiffness * (target - this._wheelY[i])
@@ -356,11 +432,59 @@ export class RallyCar {
     if (!this.finished && this.stageProgress >= 0.999) this.finished = true;
   }
 
+  // ---------------------------------------------------------- gearbox ----
+  // Arcade gears: each gear carries less torque than the last and every
+  // upshift under throttle cuts torque briefly — that stepped pull plus the
+  // matching engine note is what makes acceleration feel non-linear.
+  _updateGears(dt, input) {
+    const T = this.tuning;
+    const v = this.forwardSpeed;
+    if (v < -0.5) {
+      this.gear = 0;
+      this.shiftTimer = 0;
+    } else {
+      const f = v / T.maxSpeed;
+      let want = 1;
+      for (let g = 0; g < GEAR_UP.length; g++) {
+        if (f > GEAR_UP[g]) want = g + 2;
+      }
+      want = Math.min(5, want);
+      if (want < this.gear) {
+        // Downshift with hysteresis so it never hunts at a boundary.
+        const lo = this.gear <= 1 ? 0 : GEAR_UP[this.gear - 2] - 0.06;
+        if (f < lo) this.gear = Math.max(1, want);
+      } else if (want > this.gear && this.gear >= 1) {
+        this.gear = want;
+        if (input.throttle > 0) this.shiftTimer = 0.22;
+      } else if (this.gear < 1) {
+        this.gear = 1;
+      }
+    }
+    if (this.shiftTimer > 0) this.shiftTimer -= dt;
+    // RPM for the engine audio: climbs through each gear, drops on shift.
+    if (this.gear === 0) {
+      this.rpm = 0.3;
+    } else if (v < 0.5 && input.throttle <= 0) {
+      this.rpm = 0.18;
+    } else {
+      const lo = this.gear <= 1 ? 0 : GEAR_UP[this.gear - 2] * T.maxSpeed;
+      const hi = this.gear >= 5 ? T.maxSpeed : GEAR_UP[this.gear - 1] * T.maxSpeed;
+      const r = THREE.MathUtils.clamp((v - lo) / Math.max(1, hi - lo), 0, 1);
+      this.rpm = Math.min(1.05, 0.3 + 0.7 * r + (input.throttle > 0 ? 0.04 : 0));
+    }
+  }
+
+  _torqueMult() {
+    const m = GEAR_TORQUE[Math.max(1, this.gear) - 1] || 0.85;
+    return this.shiftTimer > 0 ? m * 0.25 : m;
+  }
+
   // ------------------------------------------------------ mesh transform ---
   syncMesh() {
     this.group.position.set(this.position.x, this._groundY, this.position.z);
     this.group.rotation.y = this.yaw;
     this.bodyGroup.position.y = this.tuning.rideHeight;
+    this.bodyGroup.rotation.y = this.slideVis * 0.5;
     this.bodyGroup.rotation.z = this.roll;
     this.bodyGroup.rotation.x = this.pitch;
     for (let i = 0; i < 4; i++) {

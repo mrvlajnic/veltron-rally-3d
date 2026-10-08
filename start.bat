@@ -16,7 +16,22 @@ echo   Starting local server...
 echo ============================================
 echo.
 
-REM Check for Python
+REM Check for Node.js first: bundled server.js sends Cache-Control: no-cache,
+REM so the browser always picks up fresh JS. Python's http.server allows
+REM aggressive module caching, which can mix old and new files after an update.
+where node >nul 2>nul
+if %errorlevel% == 0 (
+    echo [OK] Node.js found
+    echo [OK] Server starting at http://localhost:8123
+    echo.
+    echo Press Ctrl+C to stop the server
+    echo.
+    start "" "http://localhost:8123"
+    node server.js 8123
+    goto :eof
+)
+
+REM Check for Python (fallback: hard-reload the game tab, Ctrl+F5, after updates)
 where python >nul 2>nul
 if %errorlevel% == 0 (
     echo [OK] Python found
@@ -39,19 +54,6 @@ if %errorlevel% == 0 (
     echo.
     start "" "http://localhost:8123"
     python3 -m http.server 8123
-    goto :eof
-)
-
-REM Check for Node.js (use bundled server.js - no npm install needed)
-where node >nul 2>nul
-if %errorlevel% == 0 (
-    echo [OK] Node.js found
-    echo [OK] Server starting at http://localhost:8123
-    echo.
-    echo Press Ctrl+C to stop the server
-    echo.
-    start "" "http://localhost:8123"
-    node server.js 8123
     goto :eof
 )
 
