@@ -47,8 +47,8 @@ This document inventories all third-party dependencies, reference material, and 
 - **File**: `Full_Throttle_Bay.mp3` (4.38 MB)
 - **Location**: Project root
 - **Usage**: Menu + garage background music (continuous across both); pauses for the race
-- **Licensing status**: License-free track contributed by the project owner
-- **Action required**: Record the exact license / attribution terms here before public redistribution
+- **Origin**: AI-generated with Google Gemini (no human third-party author)
+- **Licensing status**: Generated content — verify the current Gemini terms for ownership, commercial use, and whether attribution is required before public redistribution
 - **Replaces**: "Call It What You Like — VIP Remix" (removed; rights were never confirmed, and it was never tracked in git)
 
 ---
@@ -81,13 +81,13 @@ This document inventories all third-party dependencies, reference material, and 
 | Original code (src/, index.html, style.css) | MIT | Yes |
 | Three.js r160 | MIT | Yes (vendored) |
 | Research sources | Various (fair use / reference) | No (reference only) |
-| Music track | License-free (confirm exact terms) | Yes (root) |
+| Music track | AI-generated (Gemini; verify terms) | Yes (root) |
 | Title backdrop | AI-generated (see above) | Yes (assets/) |
 
 ---
 
 **If redistributing this project publicly**:
 1. Verify Three.js MIT license is included (already in vendor file header)
-2. Record the exact license/attribution terms for `Full_Throttle_Bay.mp3` above
+2. Verify the current Gemini terms for `Full_Throttle_Bay.mp3` (ownership, commercial use, attribution) and record them above
 3. Include this THIRD_PARTY.md in the distribution
 4. Retain MIT license for original code

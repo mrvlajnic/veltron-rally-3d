@@ -21,7 +21,7 @@ This project includes or references third-party content:
 | Content | Status |
 |---------|--------|
 | Three.js (r160) | Bundled under MIT License |
-| "Full Throttle Bay" (MP3) | License-free track; exact license/attribution terms to be recorded in THIRD_PARTY.md |
+| "Full Throttle Bay" (MP3) | AI-generated with Google Gemini; Gemini terms (ownership, commercial use, attribution) must be verified before redistribution |
 | Research sources (Wikipedia, forums, videos) | Fair use / reference only |
 
 **If you redistribute this project**, you are responsible for verifying rights to any third-party content. The project maintainers make no claims regarding redistribution rights for the included music track.

@@ -99,7 +99,7 @@ The game implements an arcade rally model designed for immediate readability:
 
 ## Audio
 
-Main menu soundtrack: **"Full Throttle Bay"** (license-free, file: `Full_Throttle_Bay.mp3` in project root, 4.38 MB)
+Main menu soundtrack: **"Full Throttle Bay"** (AI-generated with Gemini, file: `Full_Throttle_Bay.mp3` in project root, 4.38 MB)
 
 - Plays on title + garage continuously, loops seamlessly
 - Pauses for the race, resumes after

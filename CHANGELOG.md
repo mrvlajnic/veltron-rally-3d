@@ -16,7 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## Unreleased
 
 ### Changed
-- **Soundtrack swapped**: license-free "Full Throttle Bay" replaces the VIP Remix (whose rights were never confirmed); plays across title + garage
+- **Soundtrack swapped**: Gemini-generated "Full Throttle Bay" replaces the VIP Remix (whose rights were never confirmed); plays across title + garage
 
 ### Added
 - **Hood cam**: bonnet-level driver view (C toggles, chase stays default), own FOV kick + shake, shared speed-line streaks; HUD footer hints the key
