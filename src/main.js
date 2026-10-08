@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { World, ENVIRONMENTS } from './world.js';
 import { Stage, STAGES, STAGE_LIST } from './stage.js';
 import { RallyCar } from './car.js';
-import { ChaseCamera } from './camera.js';
+import { ChaseCamera, HoodCamera } from './camera.js';
 import { Input } from './input.js';
 import { HUD, formatTime } from './hud.js';
 import { BestStore, sampleGhost, REC_STEP } from './best.js';
@@ -214,6 +214,8 @@ function boot() {
   const bestStore = new BestStore();
 
   const chase = new ChaseCamera(camera, renderer.domElement);
+  const hood = new HoodCamera(camera);
+  let camMode = 'chase';   // chase | hood (C toggles while driving)
   const input = new Input();
   const hud = new HUD();
   const screens = new Screens();
@@ -354,7 +356,7 @@ function boot() {
     clearOverlays();
     ghost.group.visible = false;
     hideCountdown();
-    Music.pause();
+    Music.request();
     screens.openGarage();
     screens.applyPreview(preview);
     hud.setVisible(false);
@@ -389,6 +391,7 @@ function boot() {
     car.group.visible = true;
     preview.group.visible = false;
     chase.snapTo(car);
+    hood.snapTo(car);
     // Apply selected weather
     try { weather.setWeather(screens.selectedWeather); } catch (e) { /* weather optional */ }
     applyWetness();
@@ -420,6 +423,12 @@ function boot() {
     ghost._groundY = pose.y;
     ghost.syncMesh();
     ghost.group.visible = true;
+  }
+
+  /** C key: flip chase/hood, snapping so the cut is clean. */
+  function toggleCam() {
+    camMode = camMode === 'chase' ? 'hood' : 'chase';
+    (camMode === 'hood' ? hood : chase).snapTo(car);
   }
 
   /** Push current driving state into the synthesized audio. */
@@ -559,10 +568,12 @@ function boot() {
 
       case 'countdown': {
         if (menu.back) { goGarage(); break; }
+        if (input.consumeCamToggle()) toggleCam();
 
         // Car stays parked with locked inputs; camera settles, rain falls.
         weather.update(dt, car.position);
-        chase.update(car, dt);
+        if (camMode === 'hood') { hood.update(car, dt); chase.setSpeedLines(0, dt); }
+        else chase.update(car, dt);
         feedAudio();
 
         cdT -= dt;
@@ -580,12 +591,14 @@ function boot() {
       }
 
       case 'race': {
+        if (input.consumeCamToggle()) toggleCam();
+        const cam = camMode === 'hood' ? hood : chase;
         if (input.consumeRestart()) {
           car.reset();
           clock = 0;
           rec = [];
           recLast = -1;
-          chase.snapTo(car);
+          cam.snapTo(car);
           debug.restarts++;
         }
         if (menu.back) { goGarage(); break; }
@@ -617,9 +630,10 @@ function boot() {
         placeGhost(clock);
         // Feel: rumble on grass, faint tremor at high speed.
         const spd = Math.abs(car.forwardSpeed);
-        if (car.offRoad && spd > 4) chase.addShake(dt * 4);
-        else if (spd > 20) chase.addShake(dt * 1.2 * Math.min(1, (spd - 20) / 12));
-        chase.update(car, dt);
+        if (car.offRoad && spd > 4) cam.addShake(dt * 4);
+        else if (spd > 20) cam.addShake(dt * 1.2 * Math.min(1, (spd - 20) / 12));
+        cam.update(car, dt);
+        if (camMode === 'hood') chase.setSpeedLines(Math.min(1, spd / 42), dt);
         hud.update(car.forwardSpeed, clock, car.timePenalty);
         feedAudio();
         // Tunnel vision with speed.
@@ -638,7 +652,7 @@ function boot() {
               dirtLevel = Math.min(1, dirtLevel + 0.55);
               dirtEl.style.backgroundImage = 'url(' + dirtVariants[pi % dirtVariants.length] + ')';
               dirtEl.classList.remove('hidden');
-              chase.addShake(0.3);
+              cam.addShake(0.3);
               try { engineAudio.splash(Math.min(1, spd / 30)); } catch (e) { /* silent */ }
               break;
             }

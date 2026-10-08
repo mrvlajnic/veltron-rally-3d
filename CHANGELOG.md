@@ -15,6 +15,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### Changed
+- **Soundtrack swapped**: license-free "Full Throttle Bay" replaces the VIP Remix (whose rights were never confirmed); plays across title + garage
+
+### Added
+- **Hood cam**: bonnet-level driver view (C toggles, chase stays default), own FOV kick + shake, shared speed-line streaks; HUD footer hints the key
+
+### Changed
+- **Menu music plays through car selection**: garage no longer pauses the track — one continuous play across title + garage, pausing only for the race
+
 ### Added
 - **Time trial for real**: title mode select (CHAMPIONSHIP / TIME TRIAL), per-stage+car bests in localStorage with NEW RECORD / BEST SAVED lines, translucent ghost replay of your best (parked beside you at the countdown)
 - **Championship**: stages run in order with running totals and a CHAMP TOTAL screen; quitting back to garage abandons the run

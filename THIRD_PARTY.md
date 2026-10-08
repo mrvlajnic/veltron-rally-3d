@@ -43,16 +43,13 @@ This document inventories all third-party dependencies, reference material, and 
 ## Audio Content (Third-Party)
 
 ### Main Menu Soundtrack
-- **Track**: "Call It What You Like — VIP Remix"
-- **File**: `Call It What You Like (VIP Edit).mp3` (5.97 MB)
+- **Track**: "Full Throttle Bay"
+- **File**: `Full_Throttle_Bay.mp3` (4.38 MB)
 - **Location**: Project root
-- **Usage**: Main menu background music; pauses on garage/race, resumes on title
-- **Licensing status**: **Third-party content — redistribution rights NOT confirmed**
-- **Action required**: Before public redistribution, verify licensing or replace with original/licensed audio
-
-> **Warning**: This track is third-party content included for development atmosphere. The project does not own redistribution rights. If publishing the repository publicly, either:
-> 1. Verify and document redistribution permission, OR
-> 2. Remove the MP3 from the repository and document how to add a licensed track
+- **Usage**: Menu + garage background music (continuous across both); pauses for the race
+- **Licensing status**: License-free track contributed by the project owner
+- **Action required**: Record the exact license / attribution terms here before public redistribution
+- **Replaces**: "Call It What You Like — VIP Remix" (removed; rights were never confirmed, and it was never tracked in git)
 
 ---
 
@@ -84,13 +81,13 @@ This document inventories all third-party dependencies, reference material, and 
 | Original code (src/, index.html, style.css) | MIT | Yes |
 | Three.js r160 | MIT | Yes (vendored) |
 | Research sources | Various (fair use / reference) | No (reference only) |
-| Music track | Unknown / Third-party | Yes (root) |
+| Music track | License-free (confirm exact terms) | Yes (root) |
 | Title backdrop | AI-generated (see above) | Yes (assets/) |
 
 ---
 
 **If redistributing this project publicly**:
 1. Verify Three.js MIT license is included (already in vendor file header)
-2. **Remove or replace the MP3** unless redistribution rights are verified
+2. Record the exact license/attribution terms for `Full_Throttle_Bay.mp3` above
 3. Include this THIRD_PARTY.md in the distribution
 4. Retain MIT license for original code

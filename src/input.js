@@ -7,6 +7,7 @@ export class Input {
     this.steer = 0;       // -1 (left) .. +1 (right)
     this.handbrake = false;
     this.restartRequested = false;
+    this.camToggleRequested = false;
 
     // Edge-triggered menu actions, consumed by the screen layer.
     // `shift` is latched when left/right is pressed while Shift is held
@@ -45,6 +46,7 @@ export class Input {
       // Edge-triggered: ignore OS key-repeat.
       if (e.repeat) { this._refresh(); return; }
       if (code === 'KeyR') this.restartRequested = true;
+      if (code === 'KeyC') this.camToggleRequested = true;
       if (code === 'Enter' || code === 'NumpadEnter') this.menu.confirm = true;
       if (code === 'Escape' || code === 'Backspace') this.menu.back = true;
       if (code === 'ArrowLeft' || code === 'KeyA') {
@@ -80,6 +82,12 @@ export class Input {
   consumeRestart() {
     const r = this.restartRequested;
     this.restartRequested = false;
+    return r;
+  }
+
+  consumeCamToggle() {
+    const r = this.camToggleRequested;
+    this.camToggleRequested = false;
     return r;
   }
 

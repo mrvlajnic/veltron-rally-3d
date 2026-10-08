@@ -277,6 +277,10 @@ faint tremor above 20 m/s scaled to top speed, puddle strikes (+0.3).
 Speed-feel stack: FOV stretch + speed lines (camera) + DOM vignette overlay
 (`#speed-vignette`, opacity ramps past 25% speed ratio).
 
+Views: chase (`ChaseCamera`) and hood (`HoodCamera`, eye above the bonnet,
+C toggles, snap on switch). Both expose `snapTo/update/addShake`; speed-line
+stepping is shared via `ChaseCamera.setSpeedLines`.
+
 ## Vehicle Definitions (`cars.js`)
 
 ```js
@@ -318,7 +322,8 @@ Three vehicles share the same mesh topology; `applySpec()` swaps materials, wing
   square through lowpass), bandpassed-noise skid, speed-scaled wind. Starts on
   race entry, stops on garage/title/results; keydown/click resume for autoplay
 - `Music.request()`: tries `play()`, on rejection arms one-shot keydown/click listener
-- `Music.pause()` called on leaving title screen
+- Menu music plays across title + garage (one shared element, never restarted),
+  `Music.pause()` only on race entry
 - Single element reused — no duplicate instances
 - Volume: 0.45, `loop = true`
 

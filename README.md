@@ -99,10 +99,10 @@ The game implements an arcade rally model designed for immediate readability:
 
 ## Audio
 
-Main menu soundtrack: **"Call It What You Like — VIP Remix"** (file: `Call It What You Like (VIP Edit).mp3` in project root, 5.97 MB)
+Main menu soundtrack: **"Full Throttle Bay"** (license-free, file: `Full_Throttle_Bay.mp3` in project root, 4.38 MB)
 
-- Plays on title screen, loops seamlessly
-- Pauses on garage/race, resumes on return to title
+- Plays on title + garage continuously, loops seamlessly
+- Pauses for the race, resumes after
 - Single shared `<audio>` element; prevents duplicate instances
 - Autoplay fallback: first keypress/click triggers playback if blocked
 - Volume: 0.45
@@ -139,7 +139,7 @@ The project uses ES modules and an importmap, so it **must be served over HTTP**
 ├── start.bat               # Windows launcher (auto-detects Python/Node)
 ├── start.sh                # Mac/Linux launcher
 ├── server.js               # Zero-dependency Node.js static server
-├── Call It What You Like (VIP Edit).mp3  # Menu soundtrack
+├── Full_Throttle_Bay.mp3  # Menu soundtrack (license-free)
 ├── vendor/
 │   └── three.module.js     # Three.js r160 (vendored)
 └── src/

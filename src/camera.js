@@ -193,8 +193,19 @@ export class ChaseCamera {
     // Apply shake to camera position
     this.camera.position.add(this.shakeOffset);
 
-    // Speed lines: low ceiling, gentle shimmer, no rotation (spinning is
-    // what made them read as bicycle spokes). Stretch sells the motion.
+    // Speed lines (shared with hood cam — see setSpeedLines).
+    this.setSpeedLines(speedRatio, dt);
+
+    // Apply look target
+    const lookTarget = this._smoothedLook.clone().add(this.shakeOffset);
+    this._smoothedLook.lerp(this._targetLook, 1 - Math.exp(-this.lookLerp * dt));
+    this.camera.lookAt(this._smoothedLook.clone().add(this.shakeOffset));
+  }
+
+  /** Speed-line overlay step, shared so hood cam gets the same streaks. */
+  setSpeedLines(speedRatio, dt) {
+    // Low ceiling, gentle shimmer, no rotation (spinning is what made them
+    // read as bicycle spokes). Stretch sells the motion.
     this._fxTime = (this._fxTime || 0) + dt;
     if (speedRatio > 0.45) {
       if (!this.speedLines.parent) this.camera.add(this.speedLines);
@@ -207,11 +218,69 @@ export class ChaseCamera {
       this.speedLines.visible = false;
       if (this.speedLines.parent) this.speedLines.parent.remove(this.speedLines);
     }
+  }
+}
 
-    // Apply look target
-    const lookTarget = this._smoothedLook.clone().add(this.shakeOffset);
-    this._smoothedLook.lerp(this._targetLook, 1 - Math.exp(-this.lookLerp * dt));
-    this.camera.lookAt(this._smoothedLook.clone().add(this.shakeOffset));
+// Hood cam: driver eye just above the bonnet, looking far ahead. Near-rigid
+// follow (fast lerp kills rail harshness) with its own shake + FOV kick.
+export class HoodCamera {
+  constructor(camera) {
+    this.camera = camera;
+    this.baseFov = 75;
+    this.maxFov = 100;
+    this.fovLerp = 8.0;
+    this.shakeIntensity = 0;
+    this.shakeDecay = 12.0;
+    this._pos = new THREE.Vector3();
+    this._look = new THREE.Vector3();
+    this._tmp = new THREE.Vector3();
+  }
+
+  snapTo(car) {
+    const fwd = car.forward;
+    this._pos.copy(car.position).addScaledVector(fwd, 0.2);
+    this._pos.y = car.position.y + 1.25;
+    this.camera.position.copy(this._pos);
+    this._look.copy(car.position).addScaledVector(fwd, 25);
+    this._look.y = car.position.y + 0.8;
+    this.camera.lookAt(this._look);
+    this.camera.fov = this.baseFov;
+    this.camera.updateProjectionMatrix();
+    this.shakeIntensity = 0;
+  }
+
+  addShake(intensity) {
+    this.shakeIntensity = Math.min(1, this.shakeIntensity + intensity);
+  }
+
+  update(car, dt) {
+    const fwd = car.forward;
+    const speed = Math.abs(car.forwardSpeed);
+    const speedRatio = Math.min(1, speed / 42);
+
+    this._tmp.copy(car.position).addScaledVector(fwd, 0.2);
+    this._tmp.y = car.position.y + 1.25;
+    this._pos.lerp(this._tmp, 1 - Math.exp(-22 * dt));
+
+    if (this.shakeIntensity > 0.01) {
+      this._tmp.set(
+        (Math.random() - 0.5) * this.shakeIntensity * 0.12,
+        (Math.random() - 0.5) * this.shakeIntensity * 0.07,
+        (Math.random() - 0.5) * this.shakeIntensity * 0.05
+      );
+      this.shakeIntensity *= Math.exp(-this.shakeDecay * dt);
+    } else {
+      this._tmp.set(0, 0, 0);
+    }
+    this.camera.position.copy(this._pos).add(this._tmp);
+
+    const targetFov = this.baseFov + (this.maxFov - this.baseFov) * speedRatio;
+    this.camera.fov += (targetFov - this.camera.fov) * (1 - Math.exp(-this.fovLerp * dt));
+    this.camera.updateProjectionMatrix();
+
+    this._look.copy(car.position).addScaledVector(fwd, 25);
+    this._look.y = car.position.y + 0.8;
+    this.camera.lookAt(this._look);
   }
 }
 
