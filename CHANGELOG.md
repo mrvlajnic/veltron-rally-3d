@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Real night**: world darkness pass (unlit terrain/road/scenery scale to 0.13 — light presets alone only reached the car) plus fake headlights: long beam cones landing ~12 m out, road pool, glowing lamps/tails on both cars
 
 ### Fixed
+- **Missing map parts at volume edges**: sight lines past the terrain grid (stage starts, mountain overlooks) hit bare background — new far ground disc per stage (sunk 150 m, rim beyond fog range) reads as hazy lowlands
 - **Speed lines reworked**: were 60 full-screen spokes spinning at 0.7 opacity — now 36 short peripheral streaks, no rotation, 0.28 ceiling with shimmer, later onset (45% speed), dim blue-grey base so they don't burn through black skies
 - **Headlight beams read as light, not geometry**: gradient fade along the cone (bright at lamp, gone at the tip) and radial fade on the road pool instead of hard additive edges
 

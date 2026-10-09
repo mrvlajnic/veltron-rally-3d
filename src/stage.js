@@ -274,12 +274,27 @@ export class Stage {
 
     // Bounds, used to place the far ground plane and scenery.
     let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    let minY = Infinity;
     for (const p of pts) {
       minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
       minZ = Math.min(minZ, p.z); maxZ = Math.max(maxZ, p.z);
+      minY = Math.min(minY, p.y);
     }
     this.bounds = { minX, maxX, minZ, maxZ };
     this.center = new THREE.Vector3((minX + maxX) / 2, 0, (minZ + maxZ) / 2);
+    // Distant ground floor spec: a huge disc far below everything. The
+    // terrain grid only spans bounds ± reach, so sight lines past its edge
+    // (stage starts, switchback overlooks) would otherwise hit bare
+    // background. Sunk 150 m, it can never float above real terrain and
+    // reads as hazy lowlands; its rim sits far beyond fog range.
+    const extent = Math.max(
+      Math.abs(maxX - this.center.x), Math.abs(this.center.x - minX),
+      Math.abs(maxZ - this.center.z), Math.abs(this.center.z - minZ)
+    );
+    this.farGround = {
+      x: this.center.x, z: this.center.z,
+      y: minY - 150, r: extent + 800, minY
+    };
   }
 
   // ---------------------------------------------------------- lookup ------
@@ -414,6 +429,7 @@ export class Stage {
     scene.add(this.root);
     this._buildRoadRibbon(scene);
     this._buildTerrain(scene);
+    this._buildFarGround(scene);
     this._buildScenery(scene);
     this._buildRoadside(scene);
     this._buildPuddles(scene);
@@ -472,6 +488,21 @@ export class Stage {
 
   setVisible(on) {
     this.root.visible = on;
+  }
+
+  // Distant ground floor (see _buildCenterline spec). Flat-shaded grass,
+  // fogged to the horizon — sits inside root so night darkening catches it.
+  _buildFarGround(scene) {
+    const g = this.farGround;
+    const mesh = new THREE.Mesh(
+      new THREE.CircleGeometry(g.r, 48),
+      new THREE.MeshBasicMaterial({
+        color: new THREE.Color(this.env.grass).multiplyScalar(0.9), fog: true
+      })
+    );
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.set(g.x, g.y, g.z);
+    this.root.add(mesh);
   }
 
   // --------------------------------------------------- horizon mountains ---

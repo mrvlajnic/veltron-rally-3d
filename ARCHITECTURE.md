@@ -352,6 +352,7 @@ User Input → Input._onKey() → Input._keys Set → Input._refresh()
 - **Instanced meshes** for all repeated scenery (1 draw call each)
 - **Spatial hash** reduces query candidates from O(N) to ~60
 - **Single terrainHeight()** shared by mesh + physics
+- **Far ground disc** per stage (center, minY − 150, extent + 800) backstops sight lines past the terrain grid
 - **Unlit terrain/road** = no lighting calculations
 - **Fog + frustum culling** limits visible triangles
 - **Sky dome** rendered once, no fog, no depth write
