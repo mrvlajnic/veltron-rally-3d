@@ -23,11 +23,11 @@ Rally 3D — Veltron Edition is a browser-based rally racing prototype that recr
 ## Screenshots
 
 ![Title Screen](docs/screenshots/title-night-rain.jpg)
-![Garage](docs/screenshots/garage.png)
+![Garage](docs/screenshots/garage-centurion.jpg)
 ![Mountain Stage](docs/screenshots/mountain.png)
-![Results Screen](docs/screenshots/results.png)
+![Results Screen](docs/screenshots/results-gold.jpg)
 
-*Placeholders — screenshots to be added*
+*Mountain action shot still to be added*
 
 ## Gameplay
 
